@@ -1,0 +1,267 @@
+name: Daily PR Lessons
+
+# 每日复盘前一天合入 origin main 的 PR，把教训写进 docs/agents/lessons.md；每周一 fold，
+# 沉淀到 RULES.md / 模块 README。只在 LESSONS_RUN_REPO 上跑（可以是上游仓库本身，也可以是个人 fork），
+# 产物经滚动 PR lessons/pending 回到 origin，合并即人工确认。
+# 设计见 docs/plans/governance/daily-pr-lessons/01-design.md。
+#
+# 信任边界（D5）：模型只在 $HOME/lessons-ws 这份没有 .git 的隔离副本里读写，拿不到任何 GitHub 凭据，
+# 也碰不到 $RUNNER_TEMP（校验脚本、原始快照、$GITHUB_ENV 都在那里）。它改了什么由 sync-back
+# 逐字节比对原始快照得出，白名单内的才拷回真实仓库；之后持有凭据的步骤只执行可信代码。
+
+on:
+  schedule:
+    # UTC。01:30 = 北京 09:30（daily）；周一 02:30 = 北京 10:30（weekly fold）
+    - cron: "30 1 * * *"
+    - cron: "30 2 * * 1"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "daily 复盘 / weekly fold"
+        type: choice
+        options: [daily, weekly]
+        default: daily
+      since:
+        description: "覆盖水位的起点 sha（backfill 用，留空则读 lessons.md）"
+        required: false
+      dry_run:
+        description: "只打印 diff，不 commit / push / 开 PR"
+        type: boolean
+        default: false
+
+concurrency:
+  group: daily-pr-lessons
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  ORIGIN_REPO: "{{GITHUB_REPO}}"
+  FORK_OWNER: "{{LESSONS_FORK_OWNER}}"
+  FORK_REPO: "{{LESSONS_WORKFLOW_REPO}}"
+  BRANCH: lessons/pending
+  CLAUDE_CODE_VERSION: 2.1.300
+
+jobs:
+  lessons:
+    if: github.repository == '{{LESSONS_WORKFLOW_REPO}}'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Resolve mode
+        id: mode
+        env:
+          EVENT: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          INPUT_MODE: ${{ inputs.mode }}
+        run: |
+          if [ "$EVENT" = "workflow_dispatch" ]; then mode="$INPUT_MODE"
+          elif [ "$SCHEDULE" = "30 2 * * 1" ]; then mode=weekly
+          else mode=daily; fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        with:
+          repository: "{{GITHUB_REPO}}"
+          ref: main
+          token: ${{ secrets.LESSONS_GH_TOKEN }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configure git
+        env:
+          GH_TOKEN: ${{ secrets.LESSONS_GH_TOKEN }}
+        run: |
+          gh auth setup-git
+          git config user.name "lessons-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add fork "https://github.com/${FORK_REPO}.git"
+
+      - name: Prepare lessons/pending
+        id: branch
+        env:
+          GH_TOKEN: ${{ secrets.LESSONS_GH_TOKEN }}
+          FORK_TOKEN: ${{ github.token }}
+        run: |
+          # 只认 fork 所有者开的滚动 PR：--head 只按分支名过滤，别人的同名分支也会命中
+          pr=$(gh pr list -R "$ORIGIN_REPO" --head "$BRANCH" --state open --json number,headRepositoryOwner \
+            | python -c 'import json,os,sys; m=[p["number"] for p in json.load(sys.stdin) if p["headRepositoryOwner"]["login"]==os.environ["FORK_OWNER"]]; print(m[0] if m else "")')
+          if [ -n "$pr" ]; then
+            GH_TOKEN="$FORK_TOKEN" git fetch fork "$BRANCH"
+            git checkout -B "$BRANCH" FETCH_HEAD
+            git rebase origin/main
+          else
+            git checkout -B "$BRANCH" origin/main
+          fi
+          # 可信校验脚本：复制到模型碰不到的 $RUNNER_TEMP，每次使用前再核对 sha256
+          mkdir -p "$RUNNER_TEMP/verifier"
+          cp skills/pr-lessons/scripts/pr_lessons.py "$RUNNER_TEMP/verifier/pr_lessons.py"
+          {
+            echo "pr=$pr"
+            echo "base=$(git rev-parse HEAD)"
+            echo "verifier_sha256=$(sha256sum "$RUNNER_TEMP/verifier/pr_lessons.py" | cut -d' ' -f1)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Collect merged PRs
+        id: collect
+        if: steps.mode.outputs.mode == 'daily'
+        env:
+          GH_TOKEN: ${{ secrets.LESSONS_GH_TOKEN }}
+          SINCE: ${{ inputs.since }}
+          VERIFIER_SHA256: ${{ steps.branch.outputs.verifier_sha256 }}
+        run: |
+          V="$RUNNER_TEMP/verifier/pr_lessons.py"
+          echo "$VERIFIER_SHA256  $V" | sha256sum -c --quiet -
+          args=(collect --repo "$ORIGIN_REPO" --ref origin/main --context-dir "$RUNNER_TEMP/context")
+          if [ -n "$SINCE" ]; then args+=(--since "$SINCE"); fi
+          python "$V" "${args[@]}" > "$RUNNER_TEMP/candidates.json"
+          cat "$RUNNER_TEMP/candidates.json"
+          read -r head count < <(python -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["head"], len(d["prs"]))' "$RUNNER_TEMP/candidates.json")
+          {
+            echo "head=$head"
+            echo "count=$count"
+            echo "head_date=$(TZ=Asia/Shanghai git log -1 --format=%cd --date=format-local:%Y-%m-%d "$head")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Prepare isolated workspace
+        id: ws
+        if: steps.mode.outputs.mode == 'weekly' || steps.collect.outputs.count != '0'
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          # 原始快照（可信区）与模型工作副本都由 git archive 导出：没有 .git，hooks / config 无从写起
+          P="$RUNNER_TEMP/pristine"; WS="$HOME/lessons-ws"
+          rm -rf "$P" "$WS"; mkdir -p "$P" "$WS/_io/context"
+          git archive HEAD | tar -x -C "$P"
+          git archive HEAD | tar -x -C "$WS"
+          if [ "$MODE" = daily ]; then
+            cp "$RUNNER_TEMP/candidates.json" "$WS/_io/candidates.json"
+            if [ -d "$RUNNER_TEMP/context" ]; then cp -R "$RUNNER_TEMP/context/." "$WS/_io/context/"; fi
+          fi
+          echo "dir=$WS" >> "$GITHUB_OUTPUT"
+
+      - name: Run Claude
+        if: steps.ws.outputs.dir != ''
+        env:
+          PROVIDER: ${{ vars.LESSONS_PROVIDER || 'claude' }}
+          MODEL_OVERRIDE: ${{ vars.LESSONS_MODEL }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # 刻意不声明任何 GitHub 凭据（D5）：模型读得到的东西都可能被它写进文件
+          MODE: ${{ steps.mode.outputs.mode }}
+          WS: ${{ steps.ws.outputs.dir }}
+        working-directory: ${{ steps.ws.outputs.dir }}
+        run: |
+          # 模型切换：deepseek 走官方 Anthropic 兼容接口（api-docs.deepseek.com/guides/coding_agents），
+          # claude 走 `claude setup-token` 的订阅 token。只导出当前 provider 的凭据。
+          case "$PROVIDER" in
+            deepseek)
+              [ -n "$DEEPSEEK_API_KEY" ] || { echo "缺 secret DEEPSEEK_API_KEY"; exit 1; }
+              unset CLAUDE_CODE_OAUTH_TOKEN
+              export ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+              export ANTHROPIC_AUTH_TOKEN="$DEEPSEEK_API_KEY"
+              export ANTHROPIC_DEFAULT_HAIKU_MODEL=deepseek-flash
+              export CLAUDE_CODE_SUBAGENT_MODEL=deepseek-flash
+              unset DEEPSEEK_API_KEY
+              model="${MODEL_OVERRIDE:-deepseek-v4-pro}"
+              ;;
+            claude)
+              [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ] || { echo "缺 secret CLAUDE_CODE_OAUTH_TOKEN"; exit 1; }
+              unset DEEPSEEK_API_KEY
+              model="${MODEL_OVERRIDE:-claude-opus-5-5}"
+              ;;
+            *) echo "未知 LESSONS_PROVIDER: $PROVIDER（应为 deepseek 或 claude）"; exit 1 ;;
+          esac
+          export COMMIT_MSG_FILE="$WS/_io/commit-msg.txt" CONTEXT_DIR="$WS/_io/context"
+          echo "provider=$PROVIDER model=$model"
+          prompt="读 skills/pr-lessons/SKILL.md，按 ${MODE} 模式执行。"
+          if [ "$MODE" = daily ]; then prompt="${prompt}candidates JSON 在 _io/candidates.json，PR 正文、评论和 diff 在 _io/context/。"; fi
+          prompt="${prompt}commit message 写到 _io/commit-msg.txt。你只有文件读写工具，只能改当前目录下的文件。"
+          # dontAsk：凡需审批的调用一律拒绝；Edit 规则覆盖所有写文件工具，限定在当前目录；
+          # 关闭 hooks，禁止读工作目录以外的文件（连自身进程的环境变量都读不到）
+          npx -y "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}" -p "$prompt" \
+            --model "$model" \
+            --max-turns 80 \
+            --permission-mode dontAsk \
+            --settings '{"disableAllHooks": true, "permissions": {"blockReadsOutsideWorkingDirectories": true}}' \
+            --disallowedTools "Bash" "WebFetch" "WebSearch" \
+            --allowedTools "Read(./**)" "Edit(./**)" "Grep" "Glob"
+
+      - name: Sync model edits back
+        if: steps.ws.outputs.dir != ''
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          WS: ${{ steps.ws.outputs.dir }}
+          VERIFIER_SHA256: ${{ steps.branch.outputs.verifier_sha256 }}
+        run: |
+          V="$RUNNER_TEMP/verifier/pr_lessons.py"
+          echo "$VERIFIER_SHA256  $V" | sha256sum -c --quiet -
+          python "$V" sync-back --pristine "$RUNNER_TEMP/pristine" --workspace "$WS" --repo . \
+            --mode "$MODE" --commit-msg-out "$RUNNER_TEMP/commit-msg.txt"
+
+      - name: Advance watermark
+        if: steps.mode.outputs.mode == 'daily' && steps.collect.outputs.count != '0'
+        env:
+          HEAD_SHA: ${{ steps.collect.outputs.head }}
+          HEAD_DATE: ${{ steps.collect.outputs.head_date }}
+          VERIFIER_SHA256: ${{ steps.branch.outputs.verifier_sha256 }}
+        run: |
+          V="$RUNNER_TEMP/verifier/pr_lessons.py"
+          echo "$VERIFIER_SHA256  $V" | sha256sum -c --quiet -
+          python "$V" set-watermark --sha "${HEAD_SHA:0:10}" --date "$HEAD_DATE"
+
+      - name: Check changed paths
+        env:
+          BASE: ${{ steps.branch.outputs.base }}
+          MODE: ${{ steps.mode.outputs.mode }}
+          VERIFIER_SHA256: ${{ steps.branch.outputs.verifier_sha256 }}
+        run: |
+          V="$RUNNER_TEMP/verifier/pr_lessons.py"
+          echo "$VERIFIER_SHA256  $V" | sha256sum -c --quiet -
+          python "$V" check-diff --base "$BASE" --mode "$MODE"
+
+      - name: Check secrets not leaked
+        env:
+          BASE: ${{ steps.branch.outputs.base }}
+          VERIFIER_SHA256: ${{ steps.branch.outputs.verifier_sha256 }}
+          LESSONS_GH_TOKEN: ${{ secrets.LESSONS_GH_TOKEN }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          FORK_TOKEN: ${{ github.token }}
+        run: |
+          V="$RUNNER_TEMP/verifier/pr_lessons.py"
+          echo "$VERIFIER_SHA256  $V" | sha256sum -c --quiet -
+          python "$V" check-secrets --base "$BASE" --extra-file "$RUNNER_TEMP/commit-msg.txt" \
+            --env LESSONS_GH_TOKEN --env DEEPSEEK_API_KEY --env CLAUDE_CODE_OAUTH_TOKEN --env FORK_TOKEN
+
+      - name: Commit, push and open PR
+        env:
+          GH_TOKEN: ${{ secrets.LESSONS_GH_TOKEN }}
+          FORK_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          PR: ${{ steps.branch.outputs.pr }}
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then echo "无改动"; exit 0; fi
+          git add -A
+          git diff --cached --stat
+          if [ "$DRY_RUN" = "true" ]; then git diff --cached; exit 0; fi
+          msg="$RUNNER_TEMP/commit-msg.txt"
+          [ -s "$msg" ] || echo "lessons: ${MODE} 更新" > "$msg"
+          git -c core.hooksPath=/dev/null commit -F "$msg"
+          # rebase / 重建过分支，必须 force；concurrency 组保证没有并发写者
+          GH_TOKEN="$FORK_TOKEN" git push --force fork "HEAD:refs/heads/$BRANCH"
+          if [ -z "$PR" ]; then
+            gh pr create -R "$ORIGIN_REPO" --base main --head "$FORK_OWNER:$BRANCH" \
+              --title "lessons: 每日 PR 复盘（滚动）" \
+              --body-file skills/pr-lessons/rolling-pr-body.md
+          fi

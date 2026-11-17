@@ -1,0 +1,6 @@
+# Third-party Claude Code plugins this workflow relies on. Not vendored: bootstrap.sh installs them.
+# Format (tab-separated): <marketplace source>	<plugin@marketplace>	<required|optional>	<why>
+anthropics/claude-plugins-official	superpowers@claude-plugins-official	required	writing-plans/executing-plans delegate to subagent-driven-development, verification-before-completion, finishing-a-development-branch, using-git-worktrees
+anthropics/claude-plugins-official	code-review@claude-plugins-official	optional	/code-review for ad-hoc PR review
+mattpocock/skills	mattpocock-skills@mattpocock	optional	tdd, diagnosing-bugs, grilling, domain-modeling, codebase-design
+backnotprop/plannotator	plannotator@plannotator	optional	personal planning gate offers Plannotator for explain-back on plans

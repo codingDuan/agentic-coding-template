@@ -1,0 +1,4 @@
+interface:
+  display_name: "Organize Plans"
+  short_description: "Organize plans by domain and archive shipped task docs"
+  default_prompt: "Use $organizing-plans to organize the selected plan domain and verify its links and authority boundaries."
