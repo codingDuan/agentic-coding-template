@@ -19,10 +19,11 @@ case "$command" in
   *"gh pr create"*) ;;
   *) exit 0 ;;
 esac
-# 先去掉引号内的文字（标题、正文里的 ; | && 和 -H 字样都不算），
-# 再只看 gh pr create 这一段子命令的参数（到 && ; | 为止），避免同一行其他命令里的文字误伤。
-# -[A-Za-z]*H 同时覆盖 -H、-Hbranch 和合写的短参数（如 -dH）。
-unquoted="$(printf '%s' "$command" | sed -E "s/\"[^\"]*\"//g; s/'[^']*'//g")"
+# 先把多行合成一行（heredoc 正文常跨行），再一次性从左到右去掉 "..." 与 '...'，
+# 先出现的引号优先，所以单引号里的 " 不会和后面的 " 配对吞掉 --head。
+# 然后只看 gh pr create 这一段子命令的参数（到 && ; | 为止），避免同一行其他命令里的文字误伤。
+# -[A-Za-z]*H 同时覆盖 -H、-Hbranch 和合写的短参数（如 -dH）。这是启发式解析，不是完整的 shell 解析。
+unquoted="$(printf '%s' "$command" | tr '\n' ' ' | sed -E "s/\"[^\"]*\"|'[^']*'//g")"
 args="${unquoted#*gh pr create}"
 args="${args%%&&*}"; args="${args%%;*}"; args="${args%%|*}"
 if [[ "$args" =~ (^|[[:space:]])(--head([=[:space:]]|$)|-[A-Za-z]*H) ]]; then

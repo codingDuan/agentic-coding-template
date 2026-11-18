@@ -40,6 +40,9 @@ expect 2 "gh pr create --title 'x && y' -H other" "single-quoted separator does 
 expect 2 "echo 'gh pr create' && gh pr create --head other" "quoted earlier mention does not hide --head"
 expect 2 "gh pr create -dH other" "combined short flags with H are blocked"
 expect 0 "gh pr create --fill --body \"see -H and --head\"" "flag text inside quotes is ignored"
+multiline_body=$'gh pr create --title "t" --body "$(cat <<\'EOF\'\n| a | b |\n|---|---|\nline; two\nEOF\n)" --head other'
+expect 2 "$multiline_body" "multi-line quoted body does not hide --head"
+expect 2 "gh pr create --title 'it\"s' --head other --body \"b\"" "double quote inside single quotes does not hide --head"
 
 # 没有 jq 时 fail closed：PATH 里只放钩子需要的其他命令
 nojq="$work/nojq-bin"
