@@ -1,2 +1,0 @@
-# Marker: this repository opts into the agentic workflow (see README).
-# Personal hooks such as require-local-review.sh only act in repositories that contain this file.

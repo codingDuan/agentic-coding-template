@@ -33,6 +33,37 @@ python skills/executing-plans/scripts/check_plan_completion.py \
 If no plan applies under the repository's documented exceptions, record that reason instead of
 inventing a plan path.
 
+## Pre-PR Gates
+
+Run these after implementation and verification, before `gh pr create` or handing off the PR.
+
+### Local review loop (every PR)
+
+1. Run `code-review-request` against `origin/main...HEAD`, then handle the report with
+   `code-review-response`.
+2. If any finding is blocking (🔴), fix it, rerun the affected verification, commit, and start a new
+   round. Repeat until one round reports no 🔴 for the current HEAD.
+3. Record each round in the plan's 实际改动 section (when a plan applies) and in the PR description:
+   round number, reviewed commit, findings, and the treatment of each. An unfixed non-blocking
+   finding needs a reason.
+4. When the round for the current HEAD has no 🔴, run
+   `bash skills/pr-ready/scripts/mark-review-passed.sh`. It records HEAD as reviewed. Never run it
+   before the review finishes or while a 🔴 remains.
+5. Only then create the PR. Any later commit invalidates the record: changes after review need a
+   new round before creating or updating the PR.
+
+Claude Code enforces step 5 with the project `PreToolUse` hook in `.claude/settings.json`
+(`.claude/hooks/require-local-review.sh`), which blocks `gh pr create` unless the record matches
+HEAD. Codex has no hook; follow the steps manually.
+
+### Simulated flight (high-risk plans)
+
+For a plan classified high-risk against `docs/agents/high-risk.md`, run
+[references/simulated-flight.md](references/simulated-flight.md) with the human partner who drives
+the change, and record it in the plan's `## 模拟飞行`. Other plans record `不适用：<理由>` there.
+Do not create or hand off the PR until it passes. Code or tests changed because of the flight go
+back through full verification and plan sync, then a new review round.
+
 ## PR Description Checklist
 
 The PR description must include these sections in this order. The order is the human reading
@@ -62,7 +93,8 @@ Read-first sections:
   `AGENTS.md` / `CLAUDE.md`) need rows. This boundary is separate from the RULES.md #8
   `make test-critical` exemption.
 - **残余风险**: known risks that tests do not cover, and how to observe them after release
-  (log line, dashboard, query). Include any risk the owner explicitly signed off. Write "无" only
+  (log line, dashboard, query). Reproduce verbatim any sign-off the responsible human wrote in the
+  plan's `## 模拟飞行`; never draft that wording for them. Write "无" only
   after checking third-party dependencies, production-only concurrency, release order, and
   observability, and give the reason.
 - **回滚/恢复**: mandatory for every PR. For an ordinary change one line is enough, such as
@@ -81,6 +113,8 @@ Reference sections:
 - **状态流转**: changed states, driving actions, rejected actions.
 - **验证结果**: commands run and final outputs.
   Include each relevant plan path, the exact completion-checker command, and its exit-0 result.
+  Include the local review rounds and, for a high-risk plan, the simulated-flight conclusion with
+  its verified commit.
 - **上线步骤**: mandatory for every PR. Enumerate all eight dimensions, marking untouched
   ones "无" rather than omitting the row, then state 发布顺序 and post-deploy verification.
   **Read `docs/agents/release-dimensions.md` and follow it** — it holds the dimension table,
@@ -105,6 +139,10 @@ Block or revise the handoff when:
 - **回滚/恢复 is missing.** It is mandatory for every PR, not only high-risk categories.
 - **上线步骤 is missing, a dimension is omitted instead of marked "无", or a multi-component
   change lacks 发布顺序.**
+- **No local review round reports zero 🔴 for the current HEAD**, or rounds are not recorded.
+- **A high-risk plan lacks a passing explain-back in §0 `确认记录`, or a passing simulated flight
+  whose recorded commit still covers the current behavior.** A non-high-risk plan lacks the
+  `不适用：<理由>` lines.
 - A relevant plan completion checker was not run in full command mode, returned non-zero, or its
   concrete result is absent from 验证结果.
 - **A backend-only diff claims Worker / MCP need nothing without running the import greps**
