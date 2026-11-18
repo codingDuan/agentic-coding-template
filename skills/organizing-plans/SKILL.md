@@ -21,7 +21,7 @@ description: Use when整理 项目的 docs/plans、按业务领域归档设计/�
 
 ## 模式 A：领域整理
 
-1. 读取 `AGENTS.md`、`RULES.md`、`docs/plans/README.md`、相关 `docs/NN-*.md`、`docs/api-contract/**` 和模块 README。
+1. 读取 `CLAUDE.md`、`RULES.md`、`docs/plans/README.md`、相关 `docs/NN-*.md`、`docs/api-contract/**` 和模块 README。
 2. 只用 `git ls-files 'docs/plans/*.md' 'docs/plans/**/*.md'` 建立清单；先记录工作区状态，保护未跟踪文件和范围外改动。
 3. 为每个源路径记录 `domain`、`topic`、`decision`、代码证据和目标/权威入口。不要按日期或文档自报状态批量删除。
 4. 一级目录按业务领域组织，领域清单以 `docs/plans/README.md` 的「领域入口」表为准（例如 `billing`、`auth`、`notifications`、`governance`）。
@@ -45,7 +45,7 @@ description: Use when整理 项目的 docs/plans、按业务领域归档设计/�
 2. **前置核验**，任一不满足就停止并列出缺口，不做部分归档：
    - 每个 task 都能对应到已合入 `main` 的 PR 或提交（`gh pr list --state merged --search <关键词>`，或 `git log main --oneline -- <task 列出的文件>`）；
    - 主文档和主题 README 没有未关闭的「上线观察」「生产门槛」「待开始」「进行中」「待手工验证」；
-   - 是否已上线由发起人确认：当前发布不打 `v*` tag，无法从 Git 判断；有疑问时用 `server-triage` 查生产部署版本。确认前不做归档。
+   - 是否已上线由发起人确认：不要只凭合并状态或 Git tag 推断（很多项目的发布不打 tag，合并也不等于已部署）；有疑问时查生产实际部署的版本。确认前不做归档。
 3. **先迁长期事实**：task 里的长期契约、状态机、硬约束按模式 A 第 7 步写入权威文档，不塞进主文档。
 4. **回填主文档**：优先填已有的「实际改动清单」「踩坑记录」节；没有时在文末追加 `## 实施结果（YYYY-MM-DD 归档）`。每个 task 一行：
 

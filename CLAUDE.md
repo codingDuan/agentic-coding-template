@@ -13,6 +13,7 @@ Numbered files in `docs/` are core documents. Run `ls docs/` to see their subjec
 - Tests: `docs/09-test-guide.md`
 - Plans: `docs/plans/README.md`
 - Post-merge lessons: `docs/agents/lessons.md`
+- Reasons and incidents behind each rule: `docs/agents/rules-evidence.md`
 
 Read the lessons before code changes.
 
@@ -38,7 +39,7 @@ explicit direct-change requests, and temporary external scripts.
 If a plan exception is not clear, ask the user.
 Use edit tools for source changes. Do not use one-time scripts or complex shell commands to rewrite source files.
 
-Use `server-triage` before production diagnosis. Search `git log --grep` and verify the deployed version first.
+Before production diagnosis, search `git log --grep` and verify the deployed version first.
 Use `pr-ready` before a PR.
 
 ## Evidence and Tests

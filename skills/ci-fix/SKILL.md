@@ -18,7 +18,7 @@ Announce at start: "I'm using the ci-fix skill to reproduce and fix the failing 
 Read:
 
 1. `RULES.md`
-2. `AGENTS.md`
+2. `docs/09-test-guide.md`
 3. The failing command output
 4. Relevant test file(s)
 5. Relevant source file(s)
@@ -41,7 +41,7 @@ sync when state flow or cross-system order changes.
 5. **Fix narrowly**: change the smallest set of files that addresses the root cause.
 6. **Verify locally**:
    - rerun the isolated failing command
-   - run affected-area tests from `AGENTS.md`
+   - run affected-area tests from `docs/09-test-guide.md` §3
    - run `git diff --check`
 7. **Escalate verification** for high-risk paths: payment, subscription, permission,
    notification, auth, trading execution, migrations.

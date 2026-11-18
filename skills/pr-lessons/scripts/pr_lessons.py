@@ -42,36 +42,32 @@ PLAN_RE = re.compile(r"docs/plans/")
 SIGNOFF_RE = re.compile(r"签字放行：(?!.*<item>)")
 CI_SKIPPED_MARKER = "CI 未启动"
 
-# 仓库高风险领域：迁移、支付/订单、权益/配额、通知、信号权限、鉴权、调度。
-# 按路径关键词匹配 apps/ 与 libs/ 下的全部非测试文件——
-# 支付逻辑分散在 services/、routers/、models/、integrations/ 和三端页面里，只盯 services/
-# 会漏（Codex review #371）。关键词对小写路径做子串匹配。
-HIGH_RISK_SCOPES = ("apps/", "libs/")
-HIGH_RISK_EXCLUDE_RE = re.compile(r"(^|/)(tests?|e2e|__tests__)/|\.(test|spec)\.")
-HIGH_RISK_KEYWORDS = (
-    "/migrations/",
-    "payment",
-    "pay_client",
-    "alipay",
-    "refund",
-    "sku_order",
-    "order_projection",
-    "entitlement",
-    "subscri",
-    "quota",
-    "member_exchange",
-    "auto_renewal",
-    "notif",
-    "signal_service",
-    "signal_history_projection",
-    "oauth",
-    "permission",
-    "/security.py",
-    "/deps.py",
-    "celery_app",
-    "/schedule.py",
-)
-# 工程文档 = CLAUDE.md 测试约定里的非运行时路径；content/books 等运行时 Markdown 算代码
+# 高风险路径规则（scopes / exclude_regex / keywords）只在 high-risk.json 里维护，按项目改写。
+# 它和本脚本放在同一目录：workflow 把两者一起复制到可信区，脚本按自身位置找它。
+# 缺文件或缺字段直接报错，绝不回落成「没有高风险路径」——那会让所有高风险 PR 静默漏掉复盘。
+HIGH_RISK_CONFIG = Path(__file__).with_name("high-risk.json")
+_high_risk_cache: tuple[tuple[str, ...], re.Pattern[str], tuple[str, ...]] | None = None
+
+
+def load_high_risk(
+    path: Path = HIGH_RISK_CONFIG,
+) -> tuple[tuple[str, ...], re.Pattern[str], tuple[str, ...]]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    scopes = tuple(data["scopes"])
+    keywords = tuple(k.lower() for k in data["keywords"])
+    if not scopes or not keywords:
+        raise ValueError(f"{path}: scopes 和 keywords 都不能为空")
+    return scopes, re.compile(data["exclude_regex"]), keywords
+
+
+def _high_risk_rules() -> tuple[tuple[str, ...], re.Pattern[str], tuple[str, ...]]:
+    global _high_risk_cache
+    if _high_risk_cache is None:
+        _high_risk_cache = load_high_risk()
+    return _high_risk_cache
+
+
+# 工程文档 = docs/09-test-guide.md 里的非运行时路径；产品内容目录里的运行时 Markdown 算代码
 DOC_PREFIXES = ("docs/", "skills/")
 ROOT_META_DOCS = {
     "README.md",
@@ -92,6 +88,7 @@ ALLOWED_PATHS = {
     "weekly": (
         LESSONS_PATH,
         "RULES.md",
+        "docs/agents/rules-evidence.md",
         "docs/[0-9][0-9]-*.md",
         "apps/*/README.md",
         "apps/*/readme.md",
@@ -145,10 +142,11 @@ def prs_in_range(
 
 
 def _is_high_risk_path(path: str) -> bool:
-    if not path.startswith(HIGH_RISK_SCOPES) or HIGH_RISK_EXCLUDE_RE.search(path):
+    scopes, exclude_re, keywords = _high_risk_rules()
+    if not path.startswith(scopes) or exclude_re.search(path):
         return False
     lowered = path.lower()
-    return any(k in lowered for k in HIGH_RISK_KEYWORDS)
+    return any(k in lowered for k in keywords)
 
 
 def touches_high_risk(files: list[str]) -> bool:

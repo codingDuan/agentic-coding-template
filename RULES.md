@@ -6,6 +6,8 @@ This file is the single source for project rules. `CLAUDE.md` includes it for de
 > Template note: rules 2–9 are stack-independent and come from production experience; keep them.
 > Rule 1 is a slot for the project's own environment-parity hazards — rewrite it for your stack.
 > When you add, remove, or renumber a rule, update the mapping table in `REVIEW.md` in the same change.
+> Reasons and incident records for each rule live in [rule evidence](docs/agents/rules-evidence.md);
+> keep this file normative and put the "why" there.
 
 ## 1. Keep Development and Production Equivalent
 
@@ -17,6 +19,8 @@ Example (SQLite in dev/test, PostgreSQL in production):
 - Do not use a successful SQLite write as proof of a valid PostgreSQL write.
 - For a grouped expression with a literal, reuse one expression object in SELECT and GROUP BY.
 -->
+
+See [rule evidence](docs/agents/rules-evidence.md#rule-1-development-and-production-equivalence).
 
 ## 2. Examine All Consumers of a Contract
 
@@ -42,6 +46,7 @@ Do not search only for the field name. Search for filters on each affected value
 For each filter, identify the business concept it represents.
 If one value no longer represents that concept, use one named constant for the concept.
 Do not write the value list in multiple consumers.
+See [rule evidence](docs/agents/rules-evidence.md#rule-21-semantic-changes).
 
 ## 3. Keep Backend APIs Compatible with All Clients
 
@@ -78,6 +83,9 @@ Include applicable dirty forms: `NULL`, empty strings, naive datetimes, JSON sto
 long strings, duplicate subjects.
 In the PR result, write that the test database contained data.
 Do not use an empty-database migration run as backfill proof.
+For raw SQL results, give result column types or normalize values at the boundary,
+and add a parameterized test for each driver form.
+See [rule evidence](docs/agents/rules-evidence.md#rule-41-data-migrations-tested-with-data).
 
 ## 5. Put Documents Only in Approved Locations
 
@@ -123,6 +131,7 @@ In the PR verification result, add the scope output. When you reuse a run, also 
 Client changes still need their client checks from `docs/09-test-guide.md`.
 For payment, subscription, permission, notification, authentication, trade, or migration changes, add an API or integration test.
 For each schema migration, keep one migration head and run the migration on a production-equivalent database.
+See [rule evidence](docs/agents/rules-evidence.md#rule-8-verification-matched-to-risk).
 
 ## 9. Prevent Duplicate Facts and Unnecessary Design
 
@@ -132,3 +141,4 @@ Before you add persistent state, examine the current models, services, APIs, and
 For each business fact, select one source of truth and one stable identifier.
 Do not add a second writable copy of the same fact, dual writes, shadow ledgers, or synchronization jobs without an approved need.
 For each new table, role, status, key, service, or compatibility path, show the fact gap and the smallest rejected design.
+See [rule evidence](docs/agents/rules-evidence.md#rule-9-duplicate-facts-and-unnecessary-design).

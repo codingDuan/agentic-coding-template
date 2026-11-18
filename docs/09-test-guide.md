@@ -30,13 +30,16 @@
 | {{BACKEND_PATH}} | `{{BACKEND_TEST_COMMAND}}` | `make test-critical` + 全量 |
 | {{WEB_PATH}} | `{{WEB_UNIT_COMMAND}}` + 相邻 E2E | 用户主流程 E2E |
 | {{MIGRATION_PATH}} | 迁移单测 + 生产等价库 upgrade | 全量 + 生产等价库测试套件 |
-| `skills/**` | skill 自带脚本的测试 | — |
+| `skills/**`、`.github/scripts/**` | `make test-workflow`（skill 脚本 + 路径分类脚本的测试） | — |
+| `docs/plans/**` | `make audit-plans` | — |
 | `docs/**` | 无 | — |
 
 ## 4. 常用命令（项目填写）
 
 ```bash
 make test-critical-scope        # 列出改动路径分类，判断是否需要 test-critical
+make test-workflow              # 工作流自身的测试（CI 的 workflow job 也跑它）
+make audit-plans                # 计划目录结构与链接审计
 make test-critical              # 核心测试
 {{FULL_TEST_COMMAND}}           # 全量
 {{PROD_EQUIVALENT_DB_TEST}}     # 生产等价数据库测试

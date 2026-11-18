@@ -18,12 +18,12 @@ Load the plan, verify it satisfies project rules, execute all tasks, run the req
 Read these before implementation:
 
 1. `RULES.md`
-2. `AGENTS.md`
+2. `CLAUDE.md` (Sources and Required Workflow)
 3. `docs/plans/README.md`
 4. The **main plan document** (architecture + task index)
 5. Every **sub-task document** referenced in the index, for the requested scope
 
-If the plan touches API, data model, web UI, mobile, worker, payment, subscription, notification, or permission behavior, also read the corresponding core docs listed in `AGENTS.md`.
+If the plan touches API, data model, web UI, mobile, worker, payment, subscription, notification, or permission behavior, also read the corresponding core docs listed under Sources in `CLAUDE.md`.
 
 Then review the plan critically. Raise any questions or concerns with your human partner **before** starting. If none, create a todo per task and proceed.
 

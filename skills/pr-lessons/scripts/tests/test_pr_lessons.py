@@ -65,6 +65,29 @@ class PrNumbersTest(unittest.TestCase):
         self.assertEqual(pl.pr_numbers_from_log(lines), [10, 9, 11])
 
 
+class HighRiskConfigTest(unittest.TestCase):
+    def test_shipped_config_loads(self):
+        scopes, exclude_re, keywords = pl.load_high_risk()
+        self.assertTrue(scopes)
+        self.assertIn("/migrations/", keywords)
+        self.assertTrue(exclude_re.search("apps/api/tests/test_x.py"))
+
+    def test_missing_config_fails_loudly(self):
+        with tempfile.TemporaryDirectory() as d:
+            with self.assertRaises(FileNotFoundError):
+                pl.load_high_risk(Path(d) / "high-risk.json")
+
+    def test_empty_keywords_rejected(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "high-risk.json"
+            p.write_text(
+                json.dumps({"scopes": ["apps/"], "exclude_regex": "x", "keywords": []}),
+                encoding="utf-8",
+            )
+            with self.assertRaises(ValueError):
+                pl.load_high_risk(p)
+
+
 class ClassifyTest(unittest.TestCase):
     PAY = "apps/api/app_api/services/payment_service.py"
 
