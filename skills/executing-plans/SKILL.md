@@ -60,7 +60,7 @@ For each task:
    - A consequential design decision, risk boundary, or non-goal changed → update the plan and get the user's confirmation before continuing.
    - In a high-risk plan, a §0 decision, risk boundary, or `掌控分级` item changed → pause. Update the
      plan, explain the changed item, ask it back from a different angle, and append rows to
-     `确认记录` (trigger `决策变更：<item>`) before continuing. Implementation detail that stays
+     `确认记录` (trigger `决策变更：<项>`) before continuing. Implementation detail that stays
      within a confirmed decision does not trigger a new explain-back.
    - The change turns a non-high-risk plan into a high-risk one → reclassify the plan and run the
      full explain-back before continuing.
@@ -73,13 +73,13 @@ After all tasks are marked complete:
 
 1. **Re-read the main plan document** and confirm every task in the index is actually complete — not just the ones you remember doing. Anything skipped or partially done gets finished, and reported. Fill the plan's §9 completion-reconciliation table one row at a time: each consequential requirement/non-goal needs implementation evidence, its caller or materialization-boundary command, and the fresh result. A removal/prohibition needs repository-wide absence evidence; a helper test does not replace the named boundary.
 2. Compare the planned "Files" per task with what actually changed.
-3. Run `make test-critical-scope` and follow RULES.md §8: on `REQUIRED`, run `make test-critical`; on `NOT REQUIRED`, keep the output (and the reused run commit, if any) for the PR. Then run the path-scoped tests from `docs/09-test-guide.md`, raising to broader tests for high-risk paths: payment, subscription, permission, notifications, auth, trading execution, migrations.
+3. Run `make test-critical-scope` and follow RULES.md §8: on `REQUIRED`, run `make test-critical`; on `NOT REQUIRED`, keep the output (and the reused run commit, if any) for the PR. Then run the path-scoped tests from `docs/09-test-guide.md`, raising to broader tests for high-risk paths as defined in `docs/agents/high-risk.md`.
 4. Run formatting/static checks that apply to touched code.
 5. Run `git diff --check`.
 6. Confirm every verification promise in the plan names a real check, that the check ran, and that its result is recorded. Add missing coverage or record an explicit gap and reason.
 7. For each §0 `交给验证兜底` item, confirm the named test, contract, invariant, type check, or alert
    exists and ran green. A missing check is added, or the item moves to `必须人理解` — and in a
-   high-risk plan the reclassified item is explained back (trigger `决策变更：<item>`).
+   high-risk plan the reclassified item is explained back (trigger `决策变更：<项>`).
 
 If reconciliation finds that implementation contradicts a confirmed constraint, return to Step 3.
 Do not make the table green by weakening the plan after seeing the implementation; a consequential
@@ -133,9 +133,9 @@ Before the final response or PR handoff:
 
 ## Step 7: Complete Development
 
-After plan docs are synced and the branch is clean, go through `pr-ready`'s pre-PR gates (local
-review loop for every PR; simulated flight for high-risk plans) before creating or handing off a
-PR. Any code or test changed because of those gates returns to Step 4 and Step 5.
+After plan docs are synced and the branch is clean, go through `pr-ready`'s pre-PR gates
+(simulated flight for high-risk plans, then the local review loop for every PR) before creating or
+handing off a PR. Any code or test changed because of those gates returns to Step 4 and Step 5.
 
 - Announce: "I'm using the finishing-a-development-branch skill to complete this work."
 - **REQUIRED SUB-SKILL:** Use superpowers:finishing-a-development-branch

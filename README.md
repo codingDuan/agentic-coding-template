@@ -12,10 +12,11 @@ flowchart LR
   B --> C{负责人确认<br/>高风险：讲回}
   C --> D[executing-plans<br/>TDD 执行 · 偏离即回写计划]
   D --> E[验证<br/>test-critical-scope → test-critical<br/>计划机械验收契约]
-  E --> F[code-review-request<br/>本地评审子代理 · 报告落盘]
+  E --> S[高风险：模拟飞行<br/>记录提交进计划]
+  S --> F[code-review-request<br/>本地评审子代理 · 报告落盘]
   F --> G[code-review-response<br/>核实后再改 · 查同类]
   G -->|有 🔴| F
-  G -->|无 🔴| H[高风险：模拟飞行<br/>mark-review-passed]
+  G -->|无 🔴| H[mark-review-passed<br/>记录 HEAD]
   H --> I[pr-ready<br/>不变量表 · 回滚 · 上线八维度]
   I --> J[PR / 合并<br/>CI：scope · workflow · test-critical]
   J --> K[pr-lessons<br/>合并后复盘 → lessons.md]
@@ -51,7 +52,7 @@ flowchart LR
 | `executing-plans` | 执行计划：计划关卡 → TDD 执行（关键决策变更即重新讲回）→ 完成核对 → 计划回写 |
 | `code-review-request` | 派一个评审子代理，报告**先落盘**，防止子代理空转丢报告 |
 | `code-review-response` | 先核实再修改，按阻塞 → 机械 → 结构顺序修，修完查同类 |
-| `pr-ready` | 发 PR 前关卡（本地评审循环、高风险模拟飞行）+ PR 描述清单：不变量与故障拦截表、残余风险、回滚、上线步骤 |
+| `pr-ready` | 发 PR 前关卡（高风险模拟飞行、本地评审循环）+ PR 描述清单：不变量与故障拦截表、残余风险、回滚、上线步骤 |
 | `ci-fix` | 复现 → 定位 → 最小修复 → 最小充分验证 |
 | `pr-lessons` | 每日复盘合入的 PR，每周把反复出现的教训沉淀进规则（带脚本与测试） |
 | `organizing-plans` | 计划目录按领域整理、归档已上线主题、链接审计（带脚本与测试） |
@@ -65,7 +66,7 @@ flowchart LR
 
 - **规划**：每个计划都有 §0 决策卡（关键决策、掌控分级、可能让你意外的地方）。高风险计划实施前，负责人要**用自己的话**讲清每个关键决策和「必须人理解」项（讲回 / explain-back），按轮次表记录在「确认记录」里；其他计划写「不适用」及理由。
 - **执行**：高风险计划的关键决策变更时暂停，只对变更项重新讲回；「交给验证兜底」的每一项都要核对检查确实存在并跑绿。
-- **发 PR 前**：每个 PR 跑本地评审循环直到没有 🔴，再用 `skills/pr-ready/scripts/mark-review-passed.sh` 记录 HEAD；高风险计划还要做「模拟飞行」（数据流 + 注入故障题，答对且有通过的测试覆盖才算过）。项目钩子在没有记录时拦截 `gh pr create`；Codex 无钩子，按 `pr-ready` 手动执行。
+- **发 PR 前**：高风险计划先做「模拟飞行」（数据流 + 注入故障题，答对且有通过的测试覆盖才算过），记录提交进计划；然后每个 PR 跑本地评审循环直到没有 🔴（最后一轮只记在 PR 描述里，不再提交），再用 `skills/pr-ready/scripts/mark-review-passed.sh` 记录 HEAD。项目钩子在没有记录、带 `--head` 或缺 `jq` 时拦截 `gh pr create`；它不拦截向已有 PR 的 `git push`。Codex 无钩子，按 `pr-ready` 手动执行。CI 工作流创建的 PR 不走这个循环。
 
 ## 快速开始
 

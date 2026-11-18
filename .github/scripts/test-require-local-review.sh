@@ -30,6 +30,25 @@ expect 2 "gh pr create --fill" "blocked without record"
 
 (cd "$work" && bash "$mark" >/dev/null)
 expect 0 "gh pr create --fill" "passes when record matches HEAD"
+expect 2 "gh pr create --fill --head other" "blocks --head even when HEAD is recorded"
+expect 2 "gh pr create -H other --fill" "blocks -H even when HEAD is recorded"
+
+# 没有 jq 时 fail closed：PATH 里只放钩子需要的其他命令
+nojq="$work/nojq-bin"
+mkdir -p "$nojq"
+for c in bash cat git; do ln -s "$(command -v "$c")" "$nojq/$c"; done
+input=$(jq -n --arg d "$work" '{tool_input: {command: "gh pr create --fill"}, cwd: $d}')
+got=0; printf '%s' "$input" | PATH="$nojq" bash "$hook" 2>/dev/null || got=$?
+[[ "$got" == 2 ]] || { echo "FAIL missing jq: expected exit 2, got $got" >&2; exit 1; }
+got=0; printf '%s' '{"tool_input":{"command":"ls"}}' | PATH="$nojq" bash "$hook" 2>/dev/null || got=$?
+[[ "$got" == 0 ]] || { echo "FAIL missing jq: other commands should pass, got $got" >&2; exit 1; }
+
+# 钩子确实在项目设置里注册，且指向存在的脚本
+settings="$repo_root/.claude/settings.json"
+jq -e '.hooks.PreToolUse[] | select(.matcher == "Bash") | .hooks[]
+  | select(.command | contains(".claude/hooks/require-local-review.sh"))' "$settings" >/dev/null \
+  || { echo "FAIL hook not registered in .claude/settings.json" >&2; exit 1; }
+[[ -f "$hook" ]] || { echo "FAIL registered hook script missing" >&2; exit 1; }
 
 git -C "$work" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m two
 expect 2 "gh pr create --fill" "blocked after a new commit"

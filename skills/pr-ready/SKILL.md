@@ -35,34 +35,45 @@ inventing a plan path.
 
 ## Pre-PR Gates
 
-Run these after implementation and verification, before `gh pr create` or handing off the PR.
+Run these after implementation and verification, before `gh pr create` or handing off the PR,
+**in this order**: simulated flight first, local review loop last. The review must cover every
+commit, including the plan commit that records the flight; the review record itself never needs a
+commit, so the loop terminates.
 
-### Local review loop (every PR)
+PRs created by CI workflows (for example the `pr-lessons` rolling `lessons/pending` PR) are exempt:
+a human reviews them at merge.
+
+### 1. Simulated flight (high-risk plans)
+
+For a plan classified high-risk against `docs/agents/high-risk.md`, run
+[references/simulated-flight.md](references/simulated-flight.md) with the human partner who drives
+the change, record it in the plan's `## 模拟飞行`, and commit. Other plans record
+`不适用：<理由>` there. Do not create or hand off the PR until it passes. Code or tests changed
+because of the flight go back through full verification and plan sync before the review loop.
+
+### 2. Local review loop (every PR)
 
 1. Run `code-review-request` against `origin/main...HEAD`, then handle the report with
    `code-review-response`.
-2. If any finding is blocking (🔴), fix it, rerun the affected verification, commit, and start a new
-   round. Repeat until one round reports no 🔴 for the current HEAD.
-3. Record each round in the plan's 实际改动 section (when a plan applies) and in the PR description:
+2. If any finding is blocking (🔴), fix it, rerun the affected verification, and record that
+   round in the plan's 实际改动 section (when a plan applies) **in the same commit as the fix**.
+   Then start a new round. Repeat until one round reports no 🔴 for the current HEAD.
+3. The final round (no 🔴) is recorded **only in the PR description**, never in a tracked file:
+   committing it would change HEAD and invalidate the record. The PR description lists every round:
    round number, reviewed commit, findings, and the treatment of each. An unfixed non-blocking
    finding needs a reason.
 4. When the round for the current HEAD has no 🔴, run
    `bash skills/pr-ready/scripts/mark-review-passed.sh`. It records HEAD as reviewed. Never run it
    before the review finishes or while a 🔴 remains.
-5. Only then create the PR. Any later commit invalidates the record: changes after review need a
-   new round before creating or updating the PR.
+5. Only then create the PR, from the branch's own worktree and without `--head`. Any later commit
+   invalidates the record: changes after review need a new round before creating or updating the
+   PR. If a fix changes behavior covered by a flight exercise, re-fly that exercise first.
 
 Claude Code enforces step 5 with the project `PreToolUse` hook in `.claude/settings.json`
-(`.claude/hooks/require-local-review.sh`), which blocks `gh pr create` unless the record matches
-HEAD. Codex has no hook; follow the steps manually.
-
-### Simulated flight (high-risk plans)
-
-For a plan classified high-risk against `docs/agents/high-risk.md`, run
-[references/simulated-flight.md](references/simulated-flight.md) with the human partner who drives
-the change, and record it in the plan's `## 模拟飞行`. Other plans record `不适用：<理由>` there.
-Do not create or hand off the PR until it passes. Code or tests changed because of the flight go
-back through full verification and plan sync, then a new review round.
+(`.claude/hooks/require-local-review.sh`). It blocks `gh pr create` unless the record matches the
+HEAD of the session's working directory, blocks `--head` / `-H`, and blocks when `jq` is missing.
+It does not gate `git push` to an already open PR; updating a PR relies on step 5 being followed.
+Codex has no hook; follow the steps manually.
 
 ## PR Description Checklist
 
@@ -128,7 +139,7 @@ Block or revise the handoff when:
 - A technical plan lacks required diagrams without explicit N/A reasons.
 - API/schema/auth/payment/subscription/permission changes lack all-client compatibility.
 - Data-layer bug fixes do not explain historical data handling.
-- Verification is missing for touched high-risk paths.
+- Verification is missing for touched high-risk paths (`docs/agents/high-risk.md`).
 - **`make test-critical-scope` output is not in 验证结果, or it reports `REQUIRED` and no green
   `make test-critical` is recorded** (RULES.md §8). A reused run must name its commit and match the
   `SINCE` in the scope output.
