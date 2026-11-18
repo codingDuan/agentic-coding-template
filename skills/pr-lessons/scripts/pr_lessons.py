@@ -204,7 +204,7 @@ def classify(pr: dict, recent: list[dict]) -> list[str]:
 
 def is_candidate(flags: list[str]) -> bool:
     # 每个分类标记都代表值得复盘的异常或高风险信号；是否有关联计划只用于报告区分，
-    # 不能作为豁免，因为公共计划流程不保证执行个人的讲回或模拟飞行门槛。
+    # 不能作为豁免，因为讲回与模拟飞行只覆盖判定为高风险的计划，分类可能有误。
     return bool(flags)
 
 
