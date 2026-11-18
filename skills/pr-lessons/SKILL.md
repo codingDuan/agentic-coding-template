@@ -20,7 +20,7 @@ description: Use when running the daily merged-PR review or the weekly lessons f
    |---|---|
    | `revert` | 回滚了某个改动 |
    | `fix_of_recent` | 修的是 14 天内刚合入的东西 |
-   | `high_risk` | 改了高风险路径（基础标记） |
+   | `high_risk` | 改了高风险路径（基础标记；路径规则只在 `scripts/high-risk.json` 维护，按项目改写） |
    | `high_risk_no_plan` | 改了高风险路径且没有关联计划（同时也会带 `high_risk`） |
    | `signoff_or_ci_skipped` | 带着签字放行或 CI 未启动合入 |
 
@@ -62,7 +62,7 @@ description: Use when running the daily merged-PR review or the weekly lessons f
 
    | 规则性质 | 去向 | 写法 |
    |---|---|---|
-   | 跨模块、违反即 🔴 | `RULES.md`：新条款，或挂到已有条款的「历史踩坑」下 | 照 §2.1 / §4.1：为什么 / 典型形态 / 历史踩坑 / 硬性要求 |
+   | 跨模块、违反即 🔴 | `RULES.md` 写规范条文（新条款或补进已有条款）；原因和事故写进 `docs/agents/rules-evidence.md` 对应节 | `RULES.md` 只写硬性要求；evidence 写为什么 / 典型形态 / 事故 |
    | 某个模块专属 | 该模块 `README.md` / `readme.md`，或对应的 `docs/NN-*.md` | 规则 + 证据 |
    | 流程纪律 | 对应 `skills/<name>/SKILL.md` | 规则 + 证据 |
 
@@ -75,7 +75,7 @@ description: Use when running the daily merged-PR review or the weekly lessons f
 
 4. commit message：`lessons: 周 fold — 沉淀 <规则短名…>`；没有任何改动就不写文件。
 
-允许改动的路径由 `pr_lessons.py sync-back --mode weekly` 强制：`docs/agents/lessons.md`、`RULES.md`、`docs/NN-*.md`、`apps/*/` 与 `libs/*/` 下的 README、`skills/*/SKILL.md`。只能修改或新增这些文件；越界、删除、符号链接都会失败。
+允许改动的路径由 `pr_lessons.py sync-back --mode weekly` 强制：`docs/agents/lessons.md`、`RULES.md`、`docs/agents/rules-evidence.md`、`docs/NN-*.md`、`apps/*/` 与 `libs/*/` 下的 README、`skills/*/SKILL.md`。只能修改或新增这些文件；越界、删除、符号链接都会失败。
 
 ## 手动运行（本地）
 

@@ -29,20 +29,12 @@ class AuditPlansTest(unittest.TestCase):
         self.git(root, "config", "user.email", "audit@test.local")
         self.git(root, "config", "user.name", "audit")
         (root / "docs/plans/strategy/sample").mkdir(parents=True)
-        (root / "docs/plans/README.md").write_text("# Plans\n")
-        for domain in {
-            "agent-platform",
-            "clients",
-            "commerce",
-            "content",
-            "governance",
-            "growth",
-            "market-insight",
-            "notifications",
-            "strategy",
-            "strategy-deployment",
-            "trading",
-        }:
+        domains = ("governance", "strategy", "commerce")
+        rows = "".join(f"| {d} | [{d}](./{d}/README.md) |\n" for d in domains)
+        (root / "docs/plans/README.md").write_text(
+            "# Plans\n\n## 领域入口\n\n| 领域 | 入口 |\n|---|---|\n" + rows
+        )
+        for domain in domains:
             domain_dir = root / "docs/plans" / domain
             domain_dir.mkdir(parents=True, exist_ok=True)
             (domain_dir / "README.md").write_text(f"# {domain}\n")
@@ -123,6 +115,43 @@ class AuditPlansTest(unittest.TestCase):
         (root / "apps/service.py").write_text(
             "# 取消后无法重新复刻（见 docs/plans/strategy/sample/24-*.md）。\n"
         )
+        result = self.run_audit(root)
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_domains_come_from_plans_readme_table(self) -> None:
+        root = self.valid_fixture()
+        (root / "docs/plans/billing").mkdir()
+        (root / "docs/plans/billing/README.md").write_text("# billing\n")
+        result = self.run_audit(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("UNKNOWN_DOMAIN\tdocs/plans/billing", result.stdout)
+
+        index = root / "docs/plans/README.md"
+        index.write_text(index.read_text() + "| billing | [billing](./billing/README.md) |\n")
+        result = self.run_audit(root)
+        self.assertEqual(result.returncode, 0, result.stdout)
+
+    def test_listed_domain_without_directory_is_reported(self) -> None:
+        root = self.valid_fixture()
+        index = root / "docs/plans/README.md"
+        index.write_text(index.read_text() + "| auth | [auth](./auth/README.md) |\n")
+        result = self.run_audit(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("MISSING_DOMAIN\tdocs/plans/auth", result.stdout)
+
+    def test_empty_domain_table_fails(self) -> None:
+        root = self.valid_fixture()
+        (root / "docs/plans/README.md").write_text("# Plans\n")
+        result = self.run_audit(root)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("NO_DOMAINS", result.stdout)
+
+    def test_skips_other_skill_test_fixtures(self) -> None:
+        root = self.valid_fixture()
+        tests_dir = root / "skills/other/scripts/tests"
+        tests_dir.mkdir(parents=True)
+        (tests_dir / "test_x.py").write_text('P = "docs/plans/governance/sample/01-design.md"\n')
+        self.git(root, "add", "-A")
         result = self.run_audit(root)
         self.assertEqual(result.returncode, 0, result.stdout)
 

@@ -17,7 +17,7 @@ flowchart LR
   G -->|有 🔴| F
   G -->|无 🔴| H[模拟飞行<br/>mark-review-passed]
   H --> I[pr-ready<br/>不变量表 · 回滚 · 上线八维度]
-  I --> J[PR / 发布<br/>prod-deploy · server-triage]
+  I --> J[PR / 合并<br/>CI：scope · workflow · test-critical]
   J --> K[pr-lessons<br/>合并后复盘 → lessons.md]
   K -.沉淀.-> R[RULES.md / skills]
 ```
@@ -38,8 +38,9 @@ flowchart LR
 | `REVIEW.md` | 🔴/🟡/🟣 分级、数量上限、规则映射、多轮收敛规则 |
 | `skills/` | 项目 skill（见下表），`scripts/install-skills.sh` 安装到 `.claude/skills` 与 `.codex/skills` |
 | `personal/` | **仓库所有者专用层**：`personal-control` 关卡 + `require-local-review` 钩子，不要求协作者使用 |
-| `docs/` | 编号核心文档骨架、`plans/`（领域 → 主题）、`agents/`（教训、上线八维度、issue/标签约定、术语、skill 依赖） |
-| `Makefile` + `.github/scripts/` | `make test-critical-scope`：按改动路径判断是否必须跑核心测试，可沿用一次全绿运行 |
+| `docs/` | 编号核心文档骨架、`plans/`（领域 → 主题，附一份已上线主题的样板 `governance/daily-pr-lessons`）、`agents/`（教训、规则背后的事故记录 `rules-evidence.md`、上线八维度、issue/标签约定、术语、skill 依赖） |
+| `Makefile` + `.github/scripts/` | `make test-critical-scope`：按改动路径判断是否必须跑核心测试，可沿用一次全绿运行；`make test-workflow`：工作流自身的测试；`make audit-plans`：计划目录审计 |
+| `.github/workflows/` | `ci.yml`（scope / workflow / test-critical 三个 job 的最小骨架）、`daily-pr-lessons.yml`（每日复盘，见计划样板 §10 启用） |
 | `plugins.txt` | 依赖的第三方插件清单（不复制代码，由 `bootstrap.sh` 安装） |
 
 ### 项目 skill
@@ -54,8 +55,8 @@ flowchart LR
 | `ci-fix` | 复现 → 定位 → 最小修复 → 最小充分验证 |
 | `pr-lessons` | 每日复盘合入的 PR，每周把反复出现的教训沉淀进规则（带脚本与测试） |
 | `organizing-plans` | 计划目录按领域整理、归档已上线主题、链接审计（带脚本与测试） |
-| `server-triage` | 线上排查骨架：服务器只读铁律、先查部署版本再断言 |
-| `prod-deploy` | 发布骨架：授权边界、组件分类、部署前后核对、回滚的数据影响 |
+
+线上排查与发布流程和部署形态强相关，模板不提供；按项目需要自建 skill，并在 `CLAUDE.md` 里引用。
 
 ### 个人层（`personal/`）
 
@@ -79,7 +80,12 @@ bash bootstrap.sh --name "My Project" --slug my-project --repo my-org/my-project
 ```
 
 `bootstrap.sh` 结束时会列出所有剩余的 `{{...}}` 占位符，主要有：`RULES.md` §1（环境等价规则）、§3 客户端清单、
-`REVIEW.md` 的关键链路、`docs/09-test-guide.md` 的测试命令、`Makefile` 的 `TEST_CRITICAL_CMD`、运维 skill 的基础设施信息。
+`REVIEW.md` 的关键链路、`docs/09-test-guide.md` 的测试命令、`Makefile` 的 `TEST_CRITICAL_CMD`。
+
+此外有两处没有占位符、但需要按项目改写的配置：
+
+- `skills/pr-lessons/scripts/high-risk.json`：哪些路径算高风险（复盘必看），默认是通用关键词。
+- `.github/scripts/classify-ci-scope.sh` 的 client 行：客户端代码目录（同步改 `test-classify-ci-scope.sh`）。
 
 ## 依赖的第三方插件
 
@@ -96,7 +102,8 @@ bash bootstrap.sh --name "My Project" --slug my-project --repo my-org/my-project
 
 - 新踩的坑先进 `docs/agents/lessons.md`；反复出现或代价高的再升级成 `RULES.md` 条目或 skill 规则。改 `RULES.md` 时同步 `REVIEW.md` 的映射表。
 - 改 skill 后运行 `bash scripts/install-skills.sh`，并开新会话。
-- 不需要的 skill（例如没有服务器就不需要 `server-triage`）直接删目录，再更新 `CLAUDE.md` 中的引用。
+- 新踩的坑的「为什么」写进 `docs/agents/rules-evidence.md`，`RULES.md` 只保留规范条文。
+- 不需要的 skill 直接删目录，再更新 `CLAUDE.md` 和 README 中的引用。
 
 ## License
 

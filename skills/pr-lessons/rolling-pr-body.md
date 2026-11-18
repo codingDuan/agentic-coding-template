@@ -8,6 +8,6 @@
 - 如果 diff 里有 `RULES.md`，那是 review 的 🔴 依据，请逐条确认后再合并。
 
 机制见 `skills/pr-lessons/SKILL.md`，设计见 `docs/plans/governance/daily-pr-lessons/01-design.md`。
-本 PR 只改文档，按 CLAUDE.md 测试约定属于非运行时路径，无需 `make test-critical`。
+本 PR 只改文档，按 `RULES.md` §8 的路径分类属于豁免路径，无需 `make test-critical`。
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

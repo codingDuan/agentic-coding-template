@@ -6,7 +6,8 @@
 
 | 领域 | 入口 |
 |---|---|
-| {{DOMAIN_NAME}} | [{{domain-slug}}](./{{domain-slug}}/README.md) |
+| governance（工程治理） | [governance](./governance/README.md) |
+| {{DOMAIN_NAME}} | [{{DOMAIN_SLUG}}](./{{DOMAIN_SLUG}}/README.md) |
 
 ## 目录约定
 

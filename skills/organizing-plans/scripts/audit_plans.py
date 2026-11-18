@@ -10,19 +10,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-DOMAINS = {
-    "agent-platform",
-    "clients",
-    "commerce",
-    "content",
-    "governance",
-    "growth",
-    "market-insight",
-    "notifications",
-    "strategy",
-    "strategy-deployment",
-    "trading",
-}
+# 领域清单的唯一来源是 docs/plans/README.md 的「领域入口」表：每个领域一行
+# `[<slug>](./<slug>/README.md)`。不在脚本里写死，模板换项目时只改 README。
+DOMAIN_LINK_RE = re.compile(r"\]\(\./([a-z0-9][a-z0-9-]*)/README\.md\)")
 IGNORED_DIRS = {
     ".git",
     ".worktrees",
@@ -46,6 +36,8 @@ REPO_PATH_RE = re.compile(r"(?<![\w/])docs/plans/[^\s`)'\"]+")
 # 本脚本自身含 docs/plans 正则字面量，其测试夹具会构造不存在的 docs/plans
 # 路径；两者都是自指，扫描时必须跳过。
 DOC_REF_SKIP_PREFIXES = ("skills/organizing-plans/scripts/",)
+# 其他 skill 脚本的测试夹具同样会构造不存在的 docs/plans 路径（如 governance/sample）。
+SKILL_TESTS_RE = re.compile(r"^skills/[^/]+/scripts/tests/")
 # 源码注释里路径多为裸写，后面常紧跟中文，而中文不带空格——REPO_PATH_RE 靠空格
 # 断尾会把整段中文吞进路径（`xxx.md。两个策略`）。这里按字符集断尾，只认路径
 # 合法字符，再剥掉尾部的 `.`（句点结尾的英文句子）。字符集含 `*`：注释里的
@@ -110,15 +102,31 @@ def resolve_target(path: Path, target: str, repo: Path) -> Path | None:
     return (path.parent / target).resolve()
 
 
+def load_domains(index: Path) -> set[str]:
+    return set(DOMAIN_LINK_RE.findall(index.read_text(encoding="utf-8")))
+
+
 def check_structure(repo: Path) -> list[str]:
     plans = repo / "docs/plans"
     problems: list[str] = []
     if not plans.is_dir():
         return [issue("MISSING_PLANS", "docs/plans", "directory does not exist")]
+    index = plans / "README.md"
+    if not index.is_file():
+        return [issue("MISSING_README", "docs/plans", "README.md with the domain table missing")]
+    domains = load_domains(index)
+    if not domains:
+        return [
+            issue(
+                "NO_DOMAINS",
+                "docs/plans/README.md",
+                "领域入口 table has no `[slug](./slug/README.md)` rows",
+            )
+        ]
     # 根层允许存放日期型计划文件：入口口径以 RULES.md 和 writing-plans skill 为准，
     # 本脚本只校验领域目录结构，不拦根层文件。
     for child in plans.iterdir():
-        if child.is_dir() and child.name not in DOMAINS | {ARCHIVE}:
+        if child.is_dir() and child.name not in domains | {ARCHIVE}:
             problems.append(
                 issue(
                     "UNKNOWN_DOMAIN",
@@ -126,7 +134,7 @@ def check_structure(repo: Path) -> list[str]:
                     "directory is not a registered business domain",
                 )
             )
-    for domain in sorted(DOMAINS):
+    for domain in sorted(domains):
         domain_dir = plans / domain
         if not domain_dir.is_dir():
             problems.append(
@@ -209,7 +217,11 @@ def check_doc_refs(repo: Path) -> list[str]:
     """
     problems: list[str] = []
     for rel in command(repo, "ls-files"):
-        if rel.endswith(".md") or rel.startswith(DOC_REF_SKIP_PREFIXES):
+        if (
+            rel.endswith(".md")
+            or rel.startswith(DOC_REF_SKIP_PREFIXES)
+            or SKILL_TESTS_RE.match(rel)
+        ):
             continue
         if any(part in IGNORED_DIRS for part in Path(rel).parts):
             continue

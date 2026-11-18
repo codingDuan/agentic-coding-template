@@ -105,6 +105,8 @@ jobs:
           # 可信校验脚本：复制到模型碰不到的 $RUNNER_TEMP，每次使用前再核对 sha256
           mkdir -p "$RUNNER_TEMP/verifier"
           cp skills/pr-lessons/scripts/pr_lessons.py "$RUNNER_TEMP/verifier/pr_lessons.py"
+          # 高风险路径配置与脚本同目录（脚本按自身位置找它）；只有 collect 用，在模型运行之前
+          cp skills/pr-lessons/scripts/high-risk.json "$RUNNER_TEMP/verifier/high-risk.json"
           {
             echo "pr=$pr"
             echo "base=$(git rev-parse HEAD)"

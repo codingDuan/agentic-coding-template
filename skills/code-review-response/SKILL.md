@@ -93,7 +93,7 @@ twin in place is how a review reaches round 10.
 Evidence before assertions. Never claim fixed without the command output in hand.
 
 - `make test-critical-scope`, then `make test-critical` when it reports `REQUIRED` (RULES.md §8). A fix that only touches exempt paths after a green run reuses that run with `SINCE=<run commit>`.
-- Path-scoped tests per `AGENTS.md` 测试约定
+- Path-scoped tests per `docs/09-test-guide.md` §3
 - Pin settings switches with `monkeypatch`. A local `.env` hides failures that CI will surface,
   because CI has no `.env` and switches fall back to defaults.
 - In a worktree, override `PYTHONPATH` to the worktree itself, or you are testing the main

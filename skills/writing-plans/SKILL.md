@@ -28,7 +28,7 @@ Before writing or updating a plan, read:
 
 1. `RULES.md`
 2. `docs/plans/README.md`
-3. The relevant existing product/API/data-model docs listed in `AGENTS.md`
+3. The relevant existing product/API/data-model docs listed under Sources in `CLAUDE.md`
 4. Any existing plan directory for the same feature
 5. `docs/agents/lessons.md` — lessons from recently merged PRs; a plan touching an area with a lesson must show how it avoids repeating it
 
