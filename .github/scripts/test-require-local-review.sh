@@ -32,6 +32,9 @@ expect 2 "gh pr create --fill" "blocked without record"
 expect 0 "gh pr create --fill" "passes when record matches HEAD"
 expect 2 "gh pr create --fill --head other" "blocks --head even when HEAD is recorded"
 expect 2 "gh pr create -H other --fill" "blocks -H even when HEAD is recorded"
+expect 2 "gh pr create -Hother --fill" "blocks attached -H form"
+expect 2 "gh pr create --head=other" "blocks --head= form"
+expect 0 "gh pr create --fill && echo --head -H" "flags in a later subcommand are ignored"
 
 # 没有 jq 时 fail closed：PATH 里只放钩子需要的其他命令
 nojq="$work/nojq-bin"
@@ -46,9 +49,9 @@ got=0; printf '%s' '{"tool_input":{"command":"ls"}}' | PATH="$nojq" bash "$hook"
 # 钩子确实在项目设置里注册，且指向存在的脚本
 settings="$repo_root/.claude/settings.json"
 jq -e '.hooks.PreToolUse[] | select(.matcher == "Bash") | .hooks[]
-  | select(.command | contains(".claude/hooks/require-local-review.sh"))' "$settings" >/dev/null \
-  || { echo "FAIL hook not registered in .claude/settings.json" >&2; exit 1; }
-[[ -f "$hook" ]] || { echo "FAIL registered hook script missing" >&2; exit 1; }
+  | select(.command == "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/require-local-review.sh")
+  | select(.if == "Bash(gh pr create*)")' "$settings" >/dev/null \
+  || { echo "FAIL hook command or if-filter not registered as expected in .claude/settings.json" >&2; exit 1; }
 
 git -C "$work" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m two
 expect 2 "gh pr create --fill" "blocked after a new commit"

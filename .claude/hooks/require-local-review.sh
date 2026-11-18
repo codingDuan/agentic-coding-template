@@ -19,11 +19,13 @@ case "$command" in
   *"gh pr create"*) ;;
   *) exit 0 ;;
 esac
-case "$command" in
-  *" --head"*|*" -H "*|*" -H="*)
-    echo "钩子只核对当前工作区的 HEAD：请在该分支自己的 worktree 里运行 gh pr create，不要用 --head/-H。" >&2
-    exit 2 ;;
-esac
+# 只看 gh pr create 这一段子命令的参数（到 && ; | 为止），避免同一行其他命令里的文字误伤。
+args="${command#*gh pr create}"
+args="${args%%&&*}"; args="${args%%;*}"; args="${args%%|*}"
+if [[ "$args" =~ (^|[[:space:]])(--head([=[:space:]]|$)|-H) ]]; then
+  echo "钩子只核对当前工作区的 HEAD：请在该分支自己的 worktree 里运行 gh pr create，不要用 --head/-H。" >&2
+  exit 2
+fi
 cd "$cwd" 2>/dev/null || exit 0
 git rev-parse --show-toplevel >/dev/null 2>&1 || exit 0
 head="$(git rev-parse HEAD 2>/dev/null)" || exit 0

@@ -57,7 +57,10 @@ because of the flight go back through full verification and plan sync before the
    `code-review-response`.
 2. If any finding is blocking (🔴), fix it, rerun the affected verification, and record that
    round in the plan's 实际改动 section (when a plan applies) **in the same commit as the fix**.
-   Then start a new round. Repeat until one round reports no 🔴 for the current HEAD.
+   If the fix changes behavior covered by a flight exercise, re-fly that exercise against the fix
+   commit and commit the updated `## 模拟飞行` record separately (a record cannot name the commit
+   that contains it). Then start a new round. Repeat until one round reports no 🔴 for the current
+   HEAD.
 3. The final round (no 🔴) is recorded **only in the PR description**, never in a tracked file:
    committing it would change HEAD and invalidate the record. The PR description lists every round:
    round number, reviewed commit, findings, and the treatment of each. An unfixed non-blocking
@@ -67,7 +70,7 @@ because of the flight go back through full verification and plan sync before the
    before the review finishes or while a 🔴 remains.
 5. Only then create the PR, from the branch's own worktree and without `--head`. Any later commit
    invalidates the record: changes after review need a new round before creating or updating the
-   PR. If a fix changes behavior covered by a flight exercise, re-fly that exercise first.
+   PR.
 
 Claude Code enforces step 5 with the project `PreToolUse` hook in `.claude/settings.json`
 (`.claude/hooks/require-local-review.sh`). It blocks `gh pr create` unless the record matches the

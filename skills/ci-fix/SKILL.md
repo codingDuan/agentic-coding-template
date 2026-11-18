@@ -43,8 +43,7 @@ sync when state flow or cross-system order changes.
    - rerun the isolated failing command
    - run affected-area tests from `docs/09-test-guide.md` §3
    - run `git diff --check`
-7. **Escalate verification** for high-risk paths: payment, subscription, permission,
-   notification, auth, trading execution, migrations.
+7. **Escalate verification** for high-risk paths as defined in `docs/agents/high-risk.md`.
 
 ## Common Commands
 
