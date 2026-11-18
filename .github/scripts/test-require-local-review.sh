@@ -35,6 +35,11 @@ expect 2 "gh pr create -H other --fill" "blocks -H even when HEAD is recorded"
 expect 2 "gh pr create -Hother --fill" "blocks attached -H form"
 expect 2 "gh pr create --head=other" "blocks --head= form"
 expect 0 "gh pr create --fill && echo --head -H" "flags in a later subcommand are ignored"
+expect 2 "gh pr create --title \"a; b\" --head other" "separator inside quotes does not hide --head"
+expect 2 "gh pr create --title 'x && y' -H other" "single-quoted separator does not hide -H"
+expect 2 "echo 'gh pr create' && gh pr create --head other" "quoted earlier mention does not hide --head"
+expect 2 "gh pr create -dH other" "combined short flags with H are blocked"
+expect 0 "gh pr create --fill --body \"see -H and --head\"" "flag text inside quotes is ignored"
 
 # 没有 jq 时 fail closed：PATH 里只放钩子需要的其他命令
 nojq="$work/nojq-bin"

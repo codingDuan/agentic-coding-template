@@ -19,10 +19,13 @@ case "$command" in
   *"gh pr create"*) ;;
   *) exit 0 ;;
 esac
-# 只看 gh pr create 这一段子命令的参数（到 && ; | 为止），避免同一行其他命令里的文字误伤。
-args="${command#*gh pr create}"
+# 先去掉引号内的文字（标题、正文里的 ; | && 和 -H 字样都不算），
+# 再只看 gh pr create 这一段子命令的参数（到 && ; | 为止），避免同一行其他命令里的文字误伤。
+# -[A-Za-z]*H 同时覆盖 -H、-Hbranch 和合写的短参数（如 -dH）。
+unquoted="$(printf '%s' "$command" | sed -E "s/\"[^\"]*\"//g; s/'[^']*'//g")"
+args="${unquoted#*gh pr create}"
 args="${args%%&&*}"; args="${args%%;*}"; args="${args%%|*}"
-if [[ "$args" =~ (^|[[:space:]])(--head([=[:space:]]|$)|-H) ]]; then
+if [[ "$args" =~ (^|[[:space:]])(--head([=[:space:]]|$)|-[A-Za-z]*H) ]]; then
   echo "钩子只核对当前工作区的 HEAD：请在该分支自己的 worktree 里运行 gh pr create，不要用 --head/-H。" >&2
   exit 2
 fi
