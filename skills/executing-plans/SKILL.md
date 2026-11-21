@@ -39,9 +39,9 @@ Before touching code, check the plan has:
 - **上线步骤**: all eight dimensions from `docs/agents/release-dimensions.md`, untouched ones marked "无" rather than omitted, plus 发布顺序.
 - Rollback or recovery notes for high-risk domains.
 - §0 决策卡 and a risk level classified against `docs/agents/high-risk.md`.
-- **High-risk plan:** a current explain-back pass in §0 `确认记录` (format in
-  `writing-plans/references/explain-back.md`). If the plan predates this gate or the record is
-  missing, run the explain-back before editing code. Non-high-risk: `不适用：<理由>`.
+- **High-risk plan:** a current explain-back pass in §0 `确认记录`. If the plan predates this gate
+  or the record is missing, use `control-gates` to run the explain-back before editing code.
+  Non-high-risk: `不适用：<理由>`.
 
 If any required item is missing, update the plan first or ask the user. **Do not silently bypass `RULES.md`.**
 
@@ -59,11 +59,11 @@ For each task:
    - State or transition changed → update the state machine.
    - A consequential design decision, risk boundary, or non-goal changed → update the plan and get the user's confirmation before continuing.
    - In a high-risk plan, a §0 decision, risk boundary, or `掌控分级` item changed → pause. Update the
-     plan, explain the changed item, ask it back from a different angle, and append rows to
-     `确认记录` (trigger `决策变更：<项>`) before continuing. Implementation detail that stays
-     within a confirmed decision does not trigger a new explain-back.
-   - The change turns a non-high-risk plan into a high-risk one → reclassify the plan and run the
-     full explain-back before continuing.
+     plan, then use `control-gates` to explain back only the changed items (trigger
+     `决策变更：<项>`) before continuing. Implementation detail that stays within a confirmed
+     decision does not trigger a new explain-back.
+   - The change turns a non-high-risk plan into a high-risk one → reclassify the plan and use
+     `control-gates` to run the full explain-back before continuing.
 6. Run the task-level verification before moving on.
 7. Mark completed.
 
@@ -182,4 +182,5 @@ handing off a PR. Any code or test changed because of those gates returns to Ste
 - **writing-plans** — creates the plan this skill executes
 - **superpowers:subagent-driven-development** — preferred way to carry out Step 3 when subagents are available (other steps still run here)
 - **superpowers:finishing-a-development-branch** — complete development after all tasks
-- **pr-ready** — local review loop, simulated flight, PR description and pre-merge handoff; its 上线步骤 dimensions must match the plan's
+- **control-gates** — explain-back for high-risk plans, including re-explains after a §0 decision change
+- **pr-ready** — pre-PR gates (simulated flight via `control-gates`, local review loop), PR description and pre-merge handoff; its 上线步骤 dimensions must match the plan's

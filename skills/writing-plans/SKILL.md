@@ -86,7 +86,7 @@ Plans MUST follow a **main document + sub-task documents** structure.
 [行为变化、语义漂移、推迟的范围、迫使设计成这样的约束]
 
 ### 确认记录
-[高风险计划：讲回轮次表，见 references/explain-back.md。非高风险：`不适用：<理由>`]
+[高风险计划：讲回轮次表，见 control-gates 的 references/explain-back.md。非高风险：`不适用：<理由>`]
 
 ## 1. 问题背景 / 目标
 [Why this change is needed, what problem it solves, explicit non-goals]
@@ -365,9 +365,9 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 ## Explain-Back Gate
 
-For a **high-risk** plan, after self-review and before implementation, run the explain-back in
-[references/explain-back.md](references/explain-back.md) with the human partner who drives the
-change, and record it in §0 `确认记录`. A plan confirmation alone does not pass this gate.
+For a **high-risk** plan, after self-review and before implementation, **REQUIRED SUB-SKILL:** use
+`control-gates` to run the explain-back with the human partner who drives the change, and record it
+in §0 `确认记录`. A plan confirmation alone does not pass this gate.
 For other plans, write `不适用：<理由>` in `确认记录` and `## 模拟飞行`.
 
 ## Execution Handoff

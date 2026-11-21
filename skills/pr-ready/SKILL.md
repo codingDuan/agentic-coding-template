@@ -45,9 +45,9 @@ a human reviews them at merge.
 
 ### 1. Simulated flight (high-risk plans)
 
-For a plan classified high-risk against `docs/agents/high-risk.md`, run
-[references/simulated-flight.md](references/simulated-flight.md) with the human partner who drives
-the change, record it in the plan's `## 模拟飞行`, and commit. Other plans record
+For a plan classified high-risk against `docs/agents/high-risk.md`, **REQUIRED SUB-SKILL:** use
+`control-gates` to run the simulated flight with the human partner who drives the change, record it
+in the plan's `## 模拟飞行`, and commit. Other plans record
 `不适用：<理由>` there. Do not create or hand off the PR until it passes. Code or tests changed
 because of the flight go back through full verification and plan sync before the review loop.
 

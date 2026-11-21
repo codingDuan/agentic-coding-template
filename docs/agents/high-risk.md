@@ -1,7 +1,7 @@
 # 高风险改动范围
 
-本文是「高风险改动」的唯一定义。`writing-plans`、`executing-plans`、`pr-ready` 用它决定是否必须做
-**讲回（explain-back）**与**模拟飞行**；其他文档引用本文，不另写清单。
+本文是「高风险改动」的唯一定义。`writing-plans`、`executing-plans`、`pr-ready` 用它决定是否必须
+通过 `control-gates` 做**讲回（explain-back）**与**模拟飞行**；其他文档引用本文，不另写清单。
 
 ## 判定
 

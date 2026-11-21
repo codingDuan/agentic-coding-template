@@ -3,4 +3,4 @@
 anthropics/claude-plugins-official	superpowers@claude-plugins-official	required	writing-plans/executing-plans delegate to subagent-driven-development, verification-before-completion, finishing-a-development-branch, using-git-worktrees
 anthropics/claude-plugins-official	code-review@claude-plugins-official	optional	/code-review for ad-hoc PR review
 mattpocock/skills	mattpocock-skills@mattpocock	optional	tdd, diagnosing-bugs, grilling, domain-modeling, codebase-design
-backnotprop/plannotator	plannotator@plannotator	optional	writing-plans offers Plannotator for explain-back on high-risk plans
+backnotprop/plannotator	plannotator@plannotator	optional	control-gates offers Plannotator for explain-back on high-risk plans
