@@ -68,4 +68,10 @@ echo
 echo "Remaining placeholders to fill by hand:"
 grep -rn --exclude-dir=.git --exclude-dir=.claude --exclude-dir=.codex --exclude=bootstrap.sh '{{[A-Z_]*}}' . | cut -c1-120 || echo "  none"
 echo
+echo "Configs without placeholders that still need project values (see README):"
+echo "  Makefile TEST_CRITICAL_CMD — template default runs only make test-workflow; add your core tests"
+echo "    and the matching runtime setup to the test-critical job in .github/workflows/ci.yml"
+echo "  skills/pr-lessons/scripts/high-risk.json — high-risk paths for post-merge review"
+echo "  .github/scripts/classify-ci-scope.sh client line — client code directories"
+echo
 echo "Done. Start a new Claude Code / Codex session so the skills load."

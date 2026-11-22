@@ -79,7 +79,8 @@ After all tasks are marked complete:
 6. Confirm every verification promise in the plan names a real check, that the check ran, and that its result is recorded. Add missing coverage or record an explicit gap and reason.
 7. For each §0 `交给验证兜底` item, confirm the named test, contract, invariant, type check, or alert
    exists and ran green. A missing check is added, or the item moves to `必须人理解` — and in a
-   high-risk plan the reclassified item is explained back (trigger `决策变更：<项>`).
+   high-risk plan the reclassified item is explained back with `control-gates` (trigger
+   `决策变更：<项>`).
 
 If reconciliation finds that implementation contradicts a confirmed constraint, return to Step 3.
 Do not make the table green by weakening the plan after seeing the implementation; a consequential

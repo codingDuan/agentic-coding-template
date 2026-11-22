@@ -31,8 +31,9 @@ write `不适用：<理由>` in both places.
 ## Where the stage skills call this skill
 
 - `writing-plans` Explain-Back Gate → explain-back.
-- `executing-plans`: a §0 decision change, or reclassification to high-risk → explain-back for the
-  affected items.
+- `executing-plans`: a §0 decision change, reclassification to high-risk (Step 3), or a
+  `交给验证兜底` item moved to `必须人理解` during verification reconciliation (Step 4) →
+  explain-back for the affected items.
 - `pr-ready` Pre-PR Gates step 1 → simulated flight.
 
 The stage skills own the checks that a gate ran: `executing-plans` will not start without a current
