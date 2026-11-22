@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "pr_lessons.py 判定「高风险 PR」的唯一配置。按项目改写，改完跑 skills/pr-lessons/scripts/tests。",
+    "pr_lessons.py 判定「高风险 PR」的路径配置，是 docs/agents/high-risk.md 在路径级的投影（冲突时以该文为准）。按项目改写，改完跑 skills/pr-lessons/scripts/tests。",
     "scopes：只看这些前缀下的文件。exclude_regex：排除测试文件。keywords：对小写路径做子串匹配。",
     "关键词要按领域覆盖到所有层（services/routers/models/integrations/各端页面），只盯 services/ 会漏。",
     "避免过短的词：例如 order 会命中 Border.tsx，auth 会命中 author。"

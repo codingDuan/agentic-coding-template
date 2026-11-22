@@ -1,8 +1,11 @@
 .PHONY: help test-critical test-critical-scope test-workflow audit-plans
 
-# test-critical：核心链路测试清单的唯一来源（RULES.md §8）。按项目填写下面的命令。
+# test-critical：核心链路测试清单的唯一来源（RULES.md §8）。
+# 模板默认只跑工作流自身的测试，因为模板里没有业务代码，工作流脚本就是它的核心链路。
+# 接入项目后，把它改成项目的核心测试，并保留 test-workflow，例如：
+#   TEST_CRITICAL_CMD ?= $(MAKE) test-workflow && $(PYTHON) -m pytest -q apps/api/tests/critical
 # 是否需要跑见 make test-critical-scope；SINCE=<sha> 可沿用一次全绿的运行。
-TEST_CRITICAL_CMD ?=
+TEST_CRITICAL_CMD ?= $(MAKE) test-workflow
 PYTHON ?= python3
 
 help:

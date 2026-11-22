@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 # Initialize a repository created from this template.
-# Usage: bash bootstrap.sh --name "My Project" --slug my-project --repo owner/my-project [--with-personal] [--skip-plugins]
+# Usage: bash bootstrap.sh --name "My Project" --slug my-project --repo owner/my-project [--skip-plugins]
 set -euo pipefail
 cd "$(dirname "$0")"
 
-name="" slug="" repo="" with_personal=0 skip_plugins=0
+name="" slug="" repo="" skip_plugins=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --name) name="$2"; shift 2 ;;
     --slug) slug="$2"; shift 2 ;;
     --repo) repo="$2"; shift 2 ;;
-    --with-personal) with_personal=1; shift ;;
     --skip-plugins) skip_plugins=1; shift ;;
     -h|--help) sed -n 2,3p "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
@@ -58,15 +57,21 @@ else
   done
 fi
 
-echo "== 4/4 Personal layer"
-if [ "$with_personal" -eq 1 ]; then
-  bash personal/install-personal.sh
+echo "== 4/4 Project hooks"
+if command -v jq >/dev/null 2>&1; then
+  echo "  .claude/settings.json registers require-local-review (blocks gh pr create until local review passes)"
 else
-  echo "  skipped (pass --with-personal to install the owner-only gates and hook)"
+  echo "  jq not found: .claude/hooks/require-local-review.sh needs jq — install it so the hook can run" >&2
 fi
 
 echo
 echo "Remaining placeholders to fill by hand:"
 grep -rn --exclude-dir=.git --exclude-dir=.claude --exclude-dir=.codex --exclude=bootstrap.sh '{{[A-Z_]*}}' . | cut -c1-120 || echo "  none"
+echo
+echo "Configs without placeholders that still need project values (see README):"
+echo "  Makefile TEST_CRITICAL_CMD — template default runs only make test-workflow; add your core tests"
+echo "    and the matching runtime setup to the test-critical job in .github/workflows/ci.yml"
+echo "  skills/pr-lessons/scripts/high-risk.json — high-risk paths for post-merge review"
+echo "  .github/scripts/classify-ci-scope.sh client line — client code directories"
 echo
 echo "Done. Start a new Claude Code / Codex session so the skills load."
