@@ -3,7 +3,9 @@ name: CI
 # 最小 CI 骨架：
 #   scope         —— make test-critical-scope（RULES.md §8），判断本 PR 是否必须跑 test-critical
 #   workflow      —— 工作流自身的测试：skill 脚本 + 路径分类脚本 + 计划目录审计 + workflow 语法
-#   test-critical —— scope 判定 REQUIRED 时运行；Makefile 的 TEST_CRITICAL_CMD 未配置时只给警告
+#   test-critical —— scope 判定 REQUIRED 时运行 make test-critical。模板默认等于 test-workflow；
+#                    接入项目后改 Makefile 的 TEST_CRITICAL_CMD，并在本 job 补上项目的运行时环境。
+#                    TEST_CRITICAL_CMD 被清空时，本 job 只给警告
 # 按项目追加构建、lint、客户端检查等 job；本地规则（RULES.md §8）不因 CI 绿而豁免。
 
 on:
@@ -74,10 +76,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # 默认的 test-critical 跑 test-workflow，需要 Python、pytest、pyyaml。项目在这里追加自己的运行时环境。
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: python -m pip install --quiet pytest pyyaml
       - name: make test-critical
         run: |
           if ! grep -qE '^TEST_CRITICAL_CMD[[:space:]]*\?=[[:space:]]*[^[:space:]]' Makefile; then
             echo "::warning::TEST_CRITICAL_CMD is not configured in the Makefile; test-critical skipped. Fill it in (RULES.md §8) and add the project's runtime setup to this job."
             exit 0
           fi
-          make test-critical
+          make test-critical PYTHON=python

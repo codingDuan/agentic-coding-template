@@ -86,10 +86,11 @@ bash bootstrap.sh --name "My Project" --slug my-project --repo my-org/my-project
 ```
 
 `bootstrap.sh` 结束时会列出所有剩余的 `{{...}}` 占位符，主要有：`RULES.md` §1（环境等价规则）、§3 客户端清单、
-`REVIEW.md` 的关键链路、`docs/agents/high-risk.md` 的高风险模块清单、`docs/09-test-guide.md` 的测试命令、`Makefile` 的 `TEST_CRITICAL_CMD`。
+`REVIEW.md` 的关键链路、`docs/agents/high-risk.md` 的高风险模块清单、`docs/09-test-guide.md` 的测试命令。
 
-此外有两处没有占位符、但需要按项目改写的配置：
+此外有三处没有占位符、但需要按项目改写的配置：
 
+- `Makefile` 的 `TEST_CRITICAL_CMD`：模板默认只跑 `make test-workflow`。接入项目后改成项目的核心测试（保留 `test-workflow`），并在 `ci.yml` 的 `test-critical` job 里补上项目的运行时环境。
 - `skills/pr-lessons/scripts/high-risk.json`：哪些路径算高风险（复盘必看），默认是通用关键词。与 `docs/agents/high-risk.md` 的模块清单保持一致。
 - `.github/scripts/classify-ci-scope.sh` 的 client 行：客户端代码目录（同步改 `test-classify-ci-scope.sh`）。
 
