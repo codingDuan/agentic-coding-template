@@ -30,8 +30,11 @@ expect() {
 expect 0 "gh pr list" "other commands pass"
 expect 2 "gh pr create --fill" "blocked without record"
 
-# 只管配置的仓库：仓库外和同前缀的兄弟目录放行，仓库子目录照拦
+# 只管配置的仓库：仓库外和同前缀的兄弟目录放行，仓库子目录照拦。
+# 兄弟目录本身也是没有评审记录的 git 仓库，否则前缀误匹配时也会因「不是 git 仓库」放行，测不出来。
 mkdir -p "$work/sub" "${work}-sibling"
+git -C "${work}-sibling" init -q
+git -C "${work}-sibling" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m s
 expect 0 "gh pr create --fill" "outside the configured repo passes" "$(dirname "$work")"
 expect 0 "gh pr create --fill" "sibling dir with the same prefix passes" "${work}-sibling"
 expect 2 "gh pr create --fill" "subdirectory of the repo is still gated" "$work/sub"
