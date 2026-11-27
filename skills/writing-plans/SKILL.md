@@ -15,8 +15,8 @@ A plan has **two readers with different needs**, and each layer is written for o
 | Executor (agent or engineer) | Everything, especially sub-task documents | unlimited | Full code, exact commands, expected output |
 
 The main document must be concise enough for review while still making decisions, risks,
-compatibility, verification, and rollout explicit. Its §0 decision card is what the human explains
-back before a high-risk plan is implemented (see Explain-Back Gate).
+compatibility, verification, and rollout explicit. Personal workflow extensions may add stricter
+confirmation gates, but they are not part of the shared repository contract.
 
 For the executor layer: assume the engineer has zero context for our codebase and questionable taste. Document everything they need: which files to touch for each task, code, testing, docs to check, how to verify. Give them the whole thing as bite-sized tasks. DRY. YAGNI. TDD. Frequent commits. Assume a skilled developer who knows almost nothing about our toolset or problem domain, and who does not know good test design well.
 
@@ -68,25 +68,6 @@ Plans MUST follow a **main document + sub-task documents** structure.
 > 创建时间: YYYY-MM-DD
 > 状态: 进行中 | 已完成
 > 分支: <branch-name>
-> 风险等级: 高风险（<命中 docs/agents/high-risk.md 的哪一条>） | 非高风险（<理由>）
-
-## 0. 决策卡
-
-### 关键决策
-| 编号 | 决策 | 选择 | 否决的方案 | 选错的代价 |
-|---|---|---|---|---|
-| D1 | … | … | … | … |
-
-### 掌控分级
-| 必须人理解 | 交给验证兜底 |
-|---|---|
-| [数据模型、钱、权限、不可逆操作、对外契约、状态机] | [其他项，每项写明具体的可执行检查：测试名、契约、不变量、类型检查或告警] |
-
-### 可能让你意外的地方
-[行为变化、语义漂移、推迟的范围、迫使设计成这样的约束]
-
-### 确认记录
-[高风险计划：讲回轮次表，见 control-gates 的 references/explain-back.md。非高风险：`不适用：<理由>`]
 
 ## 1. 问题背景 / 目标
 [Why this change is needed, what problem it solves, explicit non-goals]
@@ -150,9 +131,6 @@ Task 3: [Name] → 依赖 Task 1, 2
 | 问题 | 根因 | 解决方案 |
 |------|------|----------|
 
-## 模拟飞行
-[高风险计划：实现与验证后由 pr-ready 回填。非高风险：`不适用：<理由>`]
-
 ## 13. 子任务详情
 - [Task 1: 短名称](03-task1-<name>.md)
 - [Task 2: 短名称](04-task2-<name>.md)
@@ -161,11 +139,6 @@ Task 3: [Name] → 依赖 Task 1, 2
 Sections 3–5 and 10 are **required** for migrations, payments, subscriptions,
 permissions, scheduler, notifications, and high-risk UI funnels. If one is
 genuinely not applicable, write the reason explicitly. **Silence is a plan defect.**
-
-§0 is required for every plan; keep it to 3–5 consequential decisions. Classify the plan's risk
-level against `docs/agents/high-risk.md` in the header. `## 模拟飞行` is an unnumbered section that
-stays immediately before `## 13. 子任务详情` so the shared numbering (and the completion checker's
-`## 13.` heading) is unchanged; it is the only place the simulated-flight record lives.
 
 ### Sub-Task Documents
 
@@ -354,27 +327,18 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 6. **Type consistency:** do types, signatures, and property names in later tasks match earlier ones? `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
 7. **Progressive disclosure:** is the main document free of per-task implementation detail? Are sub-task documents self-contained?
 8. **Placeholder scan:** search for the patterns in "No Placeholders" and fix them.
-9. **Decision quality:** §0 lists 3–5 consequential decisions with the rejected alternative and the
-   cost of being wrong; every `交给验证兜底` item names a concrete executable check; §2 expands the
-   choices, risks, and surprising scope boundaries clearly enough for review.
+9. **Decision quality:** §2 states consequential choices, rejected alternatives, risks, and surprising scope boundaries clearly enough for review.
 10. **Completion contract:** §9 has one reconciliation row per consequential requirement/non-goal,
     and a valid `plan-compliance/v1` block. Removal/prohibition constraints have absence evidence;
     helper tests do not stand in for named caller-boundary commands. Run the checker in static mode.
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
-## Explain-Back Gate
-
-For a **high-risk** plan, after self-review and before implementation, **REQUIRED SUB-SKILL:** use
-`control-gates` to run the explain-back with the human partner who drives the change, and record it
-in §0 `确认记录`. A plan confirmation alone does not pass this gate.
-For other plans, write `不适用：<理由>` in `确认记录` and `## 模拟飞行`.
-
 ## Execution Handoff
 
 After the plan is saved, present its path and a concise summary of decisions, risks, non-goals,
-verification, and rollout. Ask the user to confirm the plan before implementation (for a high-risk
-plan, the Explain-Back Gate must also pass), then offer the execution choice:
+verification, and rollout. Ask the user to confirm the plan before implementation, then offer the
+execution choice:
 
 **"Plan confirmed and saved to `docs/plans/<domain>/<topic>/<file>.md`. Two execution options:**
 

@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
-# PreToolUse(Bash)：gh pr create 之前，当前 HEAD 必须已记录本地 review 通过。
-# 由仓库 .claude/settings.json 注册，团队成员 clone 后自动生效（Codex 无钩子，按 pr-ready 手动执行）。
-# 记录由 skills/pr-ready/scripts/mark-review-passed.sh 写入 git 目录，不进提交。
+# PreToolUse(Bash)：在目标仓库里 gh pr create 之前，当前 HEAD 必须已记录本地 review 通过。
+# 个人 hook：注册在用户级 ~/.claude/settings.json，只对本机 owner 生效（Codex 无钩子，按 pr-ready-gate 手动执行）。
+# 记录由本 skill 的 scripts/mark-review-passed.sh 写入 git 目录，不进提交。
 # 检查的是会话工作目录的 HEAD，所以 --head / -H 指定别的分支时直接拦截。
+
+# 复制后把 <REPO_PATH> 换成仓库的绝对路径（或者设置环境变量 PERSONAL_CONTROL_REPO）。
+# 匹配仓库目录及其子目录，所以 <REPO_PATH>/.worktrees/* 也在范围内；同前缀的兄弟目录不算。
+repo_prefix="${PERSONAL_CONTROL_REPO:-<REPO_PATH>}"
+
 input="$(cat)"
+case "$input" in
+  *"gh pr create"*) ;;
+  *) exit 0 ;;
+esac
+if [ "$repo_prefix" = "<REPO_PATH>" ]; then
+  echo "require-local-review 钩子还没配置仓库路径：把脚本里的 <REPO_PATH> 换成仓库绝对路径，或设置 PERSONAL_CONTROL_REPO。" >&2
+  exit 2
+fi
 if ! command -v jq >/dev/null 2>&1; then
-  # 没有 jq 无法解析输入：只要提到 gh pr create 就 fail closed，而不是静默放行。
-  case "$input" in
-    *"gh pr create"*)
+  # 没有 jq 无法解析输入：用 hook 进程的工作目录判断范围，范围内 fail closed，而不是静默放行。
+  case "$PWD" in
+    "$repo_prefix"|"$repo_prefix"/*)
       echo "require-local-review 钩子需要 jq（例如 brew install jq），安装后再创建 PR。" >&2
       exit 2 ;;
   esac
@@ -15,6 +28,10 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 command="$(printf '%s' "$input" | jq -r '.tool_input.command // empty')"
 cwd="$(printf '%s' "$input" | jq -r '.cwd // empty')"
+case "$cwd" in
+  "$repo_prefix"|"$repo_prefix"/*) ;;
+  *) exit 0 ;;
+esac
 case "$command" in
   *"gh pr create"*) ;;
   *) exit 0 ;;
@@ -37,5 +54,5 @@ marker="$(git rev-parse --git-path agentic-review-passed 2>/dev/null)"
 if [ -f "$marker" ] && [ "$(cat "$marker")" = "$head" ]; then
   exit 0
 fi
-echo "当前 HEAD ($head) 没有本地 review 通过记录。先按 pr-ready 的「本地评审循环」跑 review，无 🔴 后运行 bash skills/pr-ready/scripts/mark-review-passed.sh，再创建 PR。" >&2
+echo "当前 HEAD ($head) 没有本地 review 通过记录。先按 personal-control 的 pr-ready-gate「本地评审循环」跑 review，无 🔴 后运行它的 scripts/mark-review-passed.sh，再创建 PR。" >&2
 exit 2

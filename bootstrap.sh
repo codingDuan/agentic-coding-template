@@ -57,12 +57,10 @@ else
   done
 fi
 
-echo "== 4/4 Project hooks"
-if command -v jq >/dev/null 2>&1; then
-  echo "  .claude/settings.json registers require-local-review (blocks gh pr create until local review passes)"
-else
-  echo "  jq not found: .claude/hooks/require-local-review.sh needs jq — install it so the hook can run" >&2
-fi
+echo "== 4/4 Optional personal overlay"
+echo "  docs/agents/personal-control is not installed for the team. Each person who wants the"
+echo "  explain-back, simulated-flight, and local-review gates copies it into their own skill"
+echo "  directory and registers its hook; see docs/agents/personal-control/README.md (needs jq)."
 
 echo
 echo "Remaining placeholders to fill by hand:"
