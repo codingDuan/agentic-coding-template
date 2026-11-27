@@ -72,7 +72,9 @@ sign-off in `## 个人模拟飞行`; reproduce that sign-off verbatim under the 
 1. Run the repository `code-review-request` skill against `origin/main...HEAD`, then handle the
    report with `code-review-response`.
 2. If any finding is blocking (🔴), fix it, rerun the affected verification, and record that round
-   in the plan's 实际改动 section (when a plan applies) **in the same commit as the fix**. If the fix
+   (round number, reviewed commit, findings, treatment) in the plan's `### 本地评审记录` subsection,
+   placed immediately before `## 个人模拟飞行` (when a plan applies), **in the same commit as the
+   fix**. If the fix
    changes behavior covered by a flight exercise, re-fly that exercise against the fix commit
    (trigger `评审后复飞`) and commit the updated `## 个人模拟飞行` record separately: a record cannot
    name the commit that contains it. Then start a new round. Repeat until one round reports no 🔴

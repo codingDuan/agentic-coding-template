@@ -47,7 +47,7 @@ section first.
 Also insert an unnumbered `## 个人模拟飞行` section immediately before the shared
 `## 13. 子任务详情` section. Keep the shared section number unchanged. This stable heading is the
 only location for the personal simulated-flight record; non-high-risk plans write
-`不适用：<理由>`.
+`不适用：<理由>`. The PR-ready gate later adds a `### 本地评审记录` subsection immediately before it.
 
 ## Explain-back
 
