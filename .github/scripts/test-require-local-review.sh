@@ -1,24 +1,26 @@
 #!/usr/bin/env bash
-# 测试 .claude/hooks/require-local-review.sh 与 skills/pr-ready/scripts/mark-review-passed.sh。
+# 测试个人包 docs/agents/personal-control 的 hooks/require-local-review.sh 与 scripts/mark-review-passed.sh。
 set -euo pipefail
 
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
-hook="$repo_root/.claude/hooks/require-local-review.sh"
-mark="$repo_root/skills/pr-ready/scripts/mark-review-passed.sh"
+pkg="$repo_root/docs/agents/personal-control"
+hook="$pkg/hooks/require-local-review.sh"
+mark="$pkg/scripts/mark-review-passed.sh"
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
+trap 'rm -rf "$work" "${work}-sibling"' EXIT
 
 git -C "$work" init -q
 git -C "$work" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m one
+export PERSONAL_CONTROL_REPO="$work"
 
 run_hook() {
-  local cmd=$1
-  jq -n --arg c "$cmd" --arg d "$work" '{tool_input: {command: $c}, cwd: $d}' | bash "$hook" 2>/dev/null
+  local cmd=$1 dir=${2:-$work}
+  jq -n --arg c "$cmd" --arg d "$dir" '{tool_input: {command: $c}, cwd: $d}' | bash "$hook" 2>/dev/null
 }
 
 expect() {
-  local want=$1 cmd=$2 label=$3 got=0
-  run_hook "$cmd" || got=$?
+  local want=$1 cmd=$2 label=$3 dir=${4:-$work} got=0
+  run_hook "$cmd" "$dir" || got=$?
   if [[ "$got" != "$want" ]]; then
     echo "FAIL $label: expected exit $want, got $got" >&2
     exit 1
@@ -27,6 +29,18 @@ expect() {
 
 expect 0 "gh pr list" "other commands pass"
 expect 2 "gh pr create --fill" "blocked without record"
+
+# 只管配置的仓库：仓库外和同前缀的兄弟目录放行，仓库子目录照拦
+mkdir -p "$work/sub" "${work}-sibling"
+expect 0 "gh pr create --fill" "outside the configured repo passes" "$(dirname "$work")"
+expect 0 "gh pr create --fill" "sibling dir with the same prefix passes" "${work}-sibling"
+expect 2 "gh pr create --fill" "subdirectory of the repo is still gated" "$work/sub"
+
+# 没配置仓库路径时 fail closed
+got=0
+jq -n --arg d "$work" '{tool_input: {command: "gh pr create --fill"}, cwd: $d}' \
+  | env -u PERSONAL_CONTROL_REPO bash "$hook" 2>/dev/null || got=$?
+[[ "$got" == 2 ]] || { echo "FAIL unconfigured repo path: expected exit 2, got $got" >&2; exit 1; }
 
 (cd "$work" && bash "$mark" >/dev/null)
 expect 0 "gh pr create --fill" "passes when record matches HEAD"
@@ -49,17 +63,16 @@ nojq="$work/nojq-bin"
 mkdir -p "$nojq"
 for c in bash cat git; do ln -s "$(command -v "$c")" "$nojq/$c"; done
 input=$(jq -n --arg d "$work" '{tool_input: {command: "gh pr create --fill"}, cwd: $d}')
-got=0; printf '%s' "$input" | PATH="$nojq" bash "$hook" 2>/dev/null || got=$?
+got=0; printf '%s' "$input" | (cd "$work" && PATH="$nojq" bash "$hook" 2>/dev/null) || got=$?
 [[ "$got" == 2 ]] || { echo "FAIL missing jq: expected exit 2, got $got" >&2; exit 1; }
+got=0; printf '%s' "$input" | (cd / && PATH="$nojq" bash "$hook" 2>/dev/null) || got=$?
+[[ "$got" == 0 ]] || { echo "FAIL missing jq outside the repo: expected exit 0, got $got" >&2; exit 1; }
 got=0; printf '%s' '{"tool_input":{"command":"ls"}}' | PATH="$nojq" bash "$hook" 2>/dev/null || got=$?
 [[ "$got" == 0 ]] || { echo "FAIL missing jq: other commands should pass, got $got" >&2; exit 1; }
 
-# 钩子确实在项目设置里注册，且指向存在的脚本
-settings="$repo_root/.claude/settings.json"
-jq -e '.hooks.PreToolUse[] | select(.matcher == "Bash") | .hooks[]
-  | select(.command == "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/require-local-review.sh")
-  | select(.if == "Bash(gh pr create*)")' "$settings" >/dev/null \
-  || { echo "FAIL hook command or if-filter not registered as expected in .claude/settings.json" >&2; exit 1; }
+# 复制安装用的占位符在仓库版里保持原样，hook 的默认值就是它
+grep -q 'PERSONAL_CONTROL_REPO:-<REPO_PATH>' "$hook" \
+  || { echo "FAIL hook default must stay the <REPO_PATH> placeholder in the repository copy" >&2; exit 1; }
 
 git -C "$work" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m two
 expect 2 "gh pr create --fill" "blocked after a new commit"

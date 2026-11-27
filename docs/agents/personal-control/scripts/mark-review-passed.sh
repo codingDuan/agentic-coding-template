@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# 记录当前 HEAD 已通过本地 review（无 🔴）。只在 pr-ready「本地评审循环」结束且无阻塞项时运行。
-# 记录放在 git 目录内，不进提交；worktree 各有各的记录。.claude/hooks/require-local-review.sh 据此放行 gh pr create。
+# 记录当前 HEAD 已通过本地 review（无 🔴）。只在 pr-ready-gate「本地评审循环」结束且无阻塞项时，
+# 在仓库 worktree 里运行。记录放在 git 目录内，不进提交；worktree 各有各的记录。
+# hooks/require-local-review.sh 据此放行 gh pr create。
 set -euo pipefail
 marker="$(git rev-parse --git-path agentic-review-passed)"
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then

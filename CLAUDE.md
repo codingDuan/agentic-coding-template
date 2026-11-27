@@ -58,5 +58,6 @@ After a skill change, run `bash scripts/install-skills.sh` and start a new sessi
 - Labels: `docs/agents/triage-labels.md`
 - Releases: `docs/agents/release-dimensions.md`
 - Terms: `docs/agents/domain.md`
-- High-risk scope (explain-back and simulated flight, run by `control-gates`): `docs/agents/high-risk.md`
+- High-risk scope: `docs/agents/high-risk.md`
+- Optional personal overlay (explain-back, simulated flight, local review loop; never required of other contributors): `docs/agents/personal-control/README.md`
 - Skill dependencies: `docs/agents/skill-dependencies.md`
