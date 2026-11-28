@@ -82,18 +82,25 @@ of Claude's explanation answers them, so they do not show understanding.
 
 Each question contains three parts:
 
-1. **Trigger**: one actor, one entry point, and real input values. Use the endpoint path, task name,
-   callback, or button from the plan. Example: 用户 1001 在 15:01 调 `GET /api/products/42/signals`;
-   支付回调 `PAY20261120001` 第二次到达; 定时任务 `daily_rebalance` 在 15:30 和 15:31 各跑一次.
-2. **State before**: the rows and field values that matter, written as values, for example
-   `subscription.status='active', expires_at=2026-11-30`. Leave out fields that do not matter.
-3. **One prediction**: one thing the owner can check against code. It can be a return value or
-   status code, a field value afterwards, which table and row get written, or which function or
-   layer rejects the input.
+1. **Trigger**: one actor, one business action, and real input values, described the way the owner
+   meets them: 用户 1001 在 15:01 打开产品 42 的信号页; 同一笔支付回调第二次到达; 每日调仓任务在
+   15:30 和 15:31 各跑一次.
+2. **State before**: the business facts that matter, written as values, for example
+   「订阅有效，11-30 到期」. Leave out facts that do not matter.
+3. **One prediction**: one observable outcome or one business decision. It can be what the user
+   sees or receives, which state a business object ends in, which record becomes the source of
+   truth, which component (migration, background job, API, page) acts first, or which business rule
+   or guard stops the input.
 
-Ask for a prediction ("之后 X 是什么值"), not a description ("说说 X 怎么工作"). To test why a
-choice was made, ask what the same input produces under the rejected alternative. Use real names
-from the plan or code: paths, functions, tables, columns, and enum values.
+Ask for a prediction ("之后 X 是什么状态"), not a description ("说说 X 怎么工作"). To test why a
+choice was made, ask what the same input produces under the rejected alternative.
+
+**Ask about logic, not code.** The owner cannot read all AI-written code, and the exercise tests
+whether they understand the design, not whether they remember identifiers. Do not ask for function
+names, field paths, column names, file locations, or exact error-code strings. Name business
+objects, user-visible states, components, and rules in plain words; an enum value or status the
+owner sees in a UI or a plan is fine. Claude still checks every answer key against the code and
+tests, and the record's `实际行为` may cite code.
 
 To re-ask, change one variable in the same case, such as an expired subscription, a repeated
 callback, or an old client without the new field. That way the new answer tests the same mechanism.
@@ -101,35 +108,39 @@ callback, or an old client without the new field. That way the new answer tests 
 Ask at most three numbered questions in one message. The simulated flight's four-step data-flow
 trace counts as one question. In the record's `题` column, start with the format tag from
 [Question formats](#question-formats), then write a short form of the case, such as
-`[简答] D2 线索 L-88 成交后看板读哪`.
+`[简答] D2 线索 L-88 成交后看板显示`.
 
-| Abstract | Concrete |
-|---|---|
-| 解释 D2 为什么以 `followup_cases` 为事实源。 | 运营在侧边栏把线索 L-88 标为「已成交」，然后刷新收入看板。看板这一行读的是哪张表的哪个字段？如果用被否决的方案（读 `leads.status`），此刻看板显示什么？ |
-| 说说支付回调的数据流。 | 订单 `PAY20261120001` 的回调首次到达，当时 `orders.status='pending'`。按顺序说：① 哪个函数先收到；② 读了哪一行；③ 写了哪些字段、写成什么值；④ 微信收到的响应是什么。 |
-| 重复回调会怎样？ | 同一个回调 3 秒后又到了一次，此时 `orders.status='paid'`。`subscriptions` 会不会多一行？是哪个判断或约束挡住的？ |
+| Abstract (too vague) | Code-level (do not ask) | Concrete |
+|---|---|---|
+| 解释 D2 为什么以跟进记录为事实源。 | 看板这一行读的是哪张表的哪个字段？ | 运营在侧边栏把线索 L-88 标为「已成交」，然后刷新收入看板。看板上这条线索显示成交了吗？如果用被否决的方案（看板读线索自身的状态），此刻显示什么？ |
+| 说说支付回调的数据流。 | ① 哪个函数先收到；② 写了哪些字段。 | 订单 P-1 的支付回调首次到达，订单当时待支付。按顺序说：① 哪个环节先处理；② 它依据哪份事实判断，那份事实当时是什么状态；③ 处理完订单和订阅各是什么状态；④ 支付平台收到的是成功还是失败。 |
+| 重复回调会怎样？ | 是哪个函数里的哪个 if 挡住的？ | 同一个回调 3 秒后又到了一次，此时订单已支付。用户会不会多出一份订阅？是哪条规则挡住的？ |
 
 ### Question formats
 
 The format tests the answer. It does not set how hard the question is. A choice format checks
 whether the owner can recognize an answer. The owner must produce the answer to show
-understanding. The default format is therefore a short-answer prediction. Its answer is one value,
-one `table.column`, one status code, or one function name, so the owner does not type long text.
+understanding. The default format is therefore a short-answer prediction. Its answer is one state,
+one outcome the user sees, one component, or one rule, so the owner does not type long text.
 
 | 标签 | Format | Use it for | Requirements | Grading |
 |---|---|---|---|---|
-| `[简答]` | Short-answer prediction | The first explain-back round of each decision and `必须人理解` item; simulated-flight data flow and fault-question row values | Each part asks for one predicted value, field, status code, or function | ✅ / ⚠️ / ❌ |
+| `[简答]` | Short-answer prediction | The first explain-back round of each decision and `必须人理解` item; simulated-flight data flow and fault-question row values | Each part asks for one predicted state, user-visible outcome, component, or rule | ✅ / ⚠️ / ❌ |
 | `[单选]` | Single choice plus a one-line reason | The rejected-alternative test, a path traced through a diagram, and the stopper of a simulated-flight fault question | 3–5 options. One option is `以上都不对` or `图上没有这条路径`. Distractors are outputs of the rejected alternative or nearby branches and states | Right option with a wrong reason is ⚠️ |
-| `[判断]` | True/false plus a reason or a correction | A re-ask that changes one variable, and whether a state transition is legal | For "true", name the function, constraint, or transition that makes it true. For "false", give the correct value or path | Wrong judgment is ❌; right judgment with a wrong reason or correction is ⚠️ |
+| `[判断]` | True/false plus a reason or a correction | A re-ask that changes one variable, and whether a state transition is legal | For "true", name the rule, guard, or transition that makes it true. For "false", give the correct state or path | Wrong judgment is ❌; right judgment with a wrong, missing, or generic reason or correction is ⚠️; right judgment with a concrete reason or correction is ✅ |
 | `[多选]` | Select all that apply | Which events leave a state, and which rows exist at a failure moment | The exact set. The options include `都没有` | Any missing or extra option is ❌ |
 | `[排序]` | Ordering | Sequence-diagram steps, especially callbacks that arrive out of order | 4–6 shuffled steps | Any step in the wrong place is ❌ |
 
 Rules:
 
 - **One ✅ row is not an item pass.** An item passes when, after its last ❌, ⚠️, or `不计` row,
-  either one `[简答]` or `[排序]` row is ✅, or two ✅ rows use different formats and are variants
-  of the same case with one variable changed. A single ✅ row of `[单选]`, `[判断]`, or `[多选]`
+  either one `[简答]`, `[排序]`, or `[判断]` row is ✅, or two ✅ rows use different formats and
+  are variants of the same case with one variable changed. A single ✅ row of `[单选]` or `[多选]`
   does not pass the item.
+- A `[判断]` row is ✅ only when the reason itself predicts the mechanism: it names the business
+  rule, guard, state, or transition that decides the case (for "false", the correct state or path).
+  This reason is what makes a single `[判断]` row enough. A bare "对/错", or a reason that only
+  restates the question, is ⚠️, and the item does not pass on it.
 - Options must not reveal the answer. The correct option must not be the only one with real names,
   the most specific one, or the longest one. Change the order of the options in each round.
 - An escape option (`以上都不对`, `图上没有这条路径`, `都没有`) can be the correct answer when the
