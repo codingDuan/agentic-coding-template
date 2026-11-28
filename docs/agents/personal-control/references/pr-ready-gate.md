@@ -20,19 +20,19 @@ implementation to the owner, and follow the planning gate's
 [Concrete questions](planning-gate.md#concrete-questions) rules for every question.
 
 1. Data flow: give one concrete trigger with real input values and the starting state that matters.
-   Then ask the owner to trace that case through the implemented code in four short numbered steps:
-   ① 哪个函数/任务先收到它; ② 读了哪张表的哪一行, 关键字段当时是什么值;
-   ③ 写了哪张表的哪些字段, 写成什么值; ④ 调用方或用户最后得到什么, 比如状态码、字段值或推送内容.
+   Then ask the owner to trace that case through the implemented logic in four short numbered steps:
+   ① 哪个环节先处理它（迁移、后台任务、接口、页面）; ② 它依据哪份事实做判断, 那份事实当时是什么状态;
+   ③ 处理完后业务对象变成什么状态; ④ 用户或调用方最后看到或拿到什么.
+   Keep every step at the logic level, as the planning gate's Concrete questions rules require.
    Use the trigger from §0 `必须人理解` that has the most risk. Do not ask the owner to describe the
    flow in general.
 2. Pose one or two injected faults drawn from §0 `必须人理解` on top of the same case. Examples are a
    duplicate callback, a worker dying between writes, an old client calling a changed contract, or
-   overlapping scheduler runs. Name the exact moment, such as "③ 写完 `orders.status` 后、写
-   `subscriptions` 前 worker 被杀". Ask for the resulting row values and which function or
-   constraint stops the problem.
-   The data-flow steps ①–④ and a fault question's resulting row values use `[简答]`. Only "which
-   function or constraint stops it" may use `[单选]` with a reason. One fault question is one row and
-   one question; it is ✅ only when the row values and the stopper are both right, and the covering
+   overlapping scheduler runs. Name the exact moment, such as "③ 订单已标为已支付、订阅还没开通时
+   worker 被杀". Ask for the resulting business state and which rule or mechanism stops the problem.
+   The data-flow steps ①–④ and a fault question's resulting state use `[简答]`. Only "which
+   rule or mechanism stops it" may use `[单选]` with a reason. One fault question is one row and
+   one question; it is ✅ only when the resulting state and the stopper are both right, and the covering
    test rule still applies. When the stopper uses `[单选]`, tag the row `[简答+单选]`; it counts as
    a `[简答]` row. Use the planning gate's
    [Question formats](planning-gate.md#question-formats) for tags and grading.
